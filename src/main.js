@@ -1,9 +1,11 @@
 import { loadState, subscribe } from './state.js';
-import { playClick, unlockAudio } from './ui/sound.js';
+import { initMusic, playClick, unlockAudio } from './ui/sound.js';
 import { recoverPendingRound } from './round.js';
 import { renderTopbar } from './ui/topbar.js';
+import { renderModes } from './ui/modes.js';
 import { renderBallboard } from './ui/ballboard.js';
 import { renderCards } from './ui/cards.js';
+import { renderPyramids } from './ui/pyramids.js';
 import { renderControls } from './ui/controls.js';
 import { iniciarNuvem } from './nuvem/sincronia.js';
 
@@ -25,17 +27,25 @@ function travarZoomDoDuploToque() {
 function start() {
   travarZoomDoDuploToque();
   const state = loadState();
-  const applyBigText = (s) => document.documentElement.classList.toggle('big-text', s.settings.bigText);
+  const applyBigText = (s) => {
+    document.documentElement.classList.toggle('big-text', s.settings.bigText);
+    document.documentElement.dataset.mode = s.mode;
+  };
   applyBigText(state);
   subscribe(applyBigText);
   document.addEventListener('pointerdown', unlockAudio);
+  initMusic();
   document.addEventListener('click', (e) => {
     if (e.target.closest('button')) playClick();
   });
 
   renderTopbar(document.getElementById('topbar'));
+  renderModes(document.getElementById('modes'));
   renderBallboard(document.getElementById('ballboard'));
-  renderCards(document.getElementById('cards'));
+  const cardsArea = document.getElementById('cards');
+  cardsArea.innerHTML = '<div id="cards-bingo"></div><div id="cards-farao"></div>';
+  renderCards(document.getElementById('cards-bingo'));
+  renderPyramids(document.getElementById('cards-farao'));
   renderControls(document.getElementById('controls'));
   recoverPendingRound();
   iniciarNuvem();

@@ -247,3 +247,47 @@ e `node --test` (26 testes).
 - **18c (pedido: "horrível no PC"):** em tela larga o painel esticava. Agora `#app` tem `max-width: min(100%, 100dvh × 0,62)`,
   centralizado (coluna de celular; o fundo continua na tela toda); número das bolas das pistas acompanha a largura (`cqi`).
   Celular em pé não muda. `CACHE` → v15; testes 39/39.
+
+## 2026-11-01 — Sessão 19: modo Faraó (pirâmides) + escolha de modo
+
+- **Perguntas respondidas pelo Victor (com fotos das regras do jogo de referência, só no computador dele):** 33 bolas por
+  rodada, bola de 1 a 90, até 10 bolas extras (as fotos diziam 9; o Victor pediu 10), **a 5ª extra sai de graça** (só no Faraó),
+  1 a 4 pirâmides (padrão 4). Visual aprovado: opção A (pedra escura, tijolo claro que vira **ouro** quando a bola sai; lado
+  completo brilha; o azul foi trocado).
+- **Regras:** pirâmide de 15 números (fileiras 1–5), as 4 usam números diferentes entre si, cada uma ordenada. "Lado" = esquerda,
+  direita ou base (cantos valem nos dois lados). 1 lado ×3, 2 lados ×70, 3 lados ×200, Bingo ×1000; só o maior prêmio por pirâmide.
+  Bola extra só é oferecida quando uma bola leva a 2 lados ou mais / Bingo; custo = ganho ÷ bolas restantes (como no Bingo); a 5ª é
+  grátis. Não fiz o "Acumulado" da foto (depende de outros jogadores).
+- **Retorno (simulação, 4 pirâmides, 60 mil rodadas):** com 33 bolas o jogador recebe só ≈ **10%** do que aposta (≈ 6% sem as
+  extras). Com 40 bolas ≈ 38%, com 45 ≈ 76%, com 50 ≈ 107%. **Decisão: ficou 33** (como na foto); mudar é só
+  `PYRAMID_MAIN_BALLS` em `src/engine/pyramids.js` (e as pistas de bolas em `LANES` de `ui/ballboard.js`). Pendência: o Victor decide.
+- **Código:** `src/engine/pyramids.js` (motor + 9 testes em `tests/pyramids.test.js`), `shuffleRange` em `draw.js`; `round.js` virou
+  dos dois modos (`GAMES`); `state.js` ganhou `mode`, `pyramids`, `pyramidActive`, `pyramidCount` (**ficam em cada aparelho, não vão
+  para a nuvem**; saldo, aposta e estatísticas continuam os mesmos nos dois modos); telas `ui/modes.js` (botões Bingo | Faraó, só
+  trocam com a rodada parada; lembram o último), `ui/pyramids.js`, painel de bolas com pistas por modo, janela "Prêmios do Faraó".
+- Os botões de modo tomaram uma linha; o número das cartelas do Bingo ficou um pouco menor (mesmo assim sem rolagem).
+- Testes 48/48; `scripts/e2e/t08.mjs` (Faraó: rodada completa, 10 extras com a 5ª grátis, saldo compartilhado, sem rolagem em 360×740,
+  390×844, 440×800); t02–t07 sem FAIL; `CACHE` → v16. **Não publicado** (aguarda o ok do Victor).
+
+- **19b (pedido: "Não foi dessa vez"):** rodada sem prêmio não abre mais janela; volta direto ao início e o botão **JOGAR** passa a
+  dizer **PRÓXIMA** (enquanto há bolas na tela; volta a "JOGAR" ao trocar de modo ou de cartelas/pirâmides). Com prêmio, a janela
+  "Parabéns!" continua. Vale para Bingo e Faraó. `round.js` (`settle`), `ui/controls.js`; t03/t04/t06/t08 ajustados. `CACHE` → v17.
+
+- **19c (pedidos do Victor):** (1) **Acelerar saiu da tela**: o botão do sorteio agora é **Terminar sorteio** (1 toque mostra todas as
+  bolas); a velocidade continua só nos Ajustes. Fluxo: JOGAR → Terminar sorteio → bola extra ou PRÓXIMA RODADA. (2) Bola extra com os
+  2 botões lado a lado. (3) **Faraó com 45 bolas** (a avó não ganhava nada com 33): retorno ≈ 76% comprando todas as extras (≈ 50% sem
+  elas). 3 pistas de bolas + a das extras (`LANES` em `ui/ballboard.js`). Constante `PYRAMID_MAIN_BALLS`. `CACHE` → v21.
+
+- **19d (pedido do Victor): avisos de prêmio por tamanho, nos 2 jogos.** Os **3 maiores prêmios** (Bingo: Cartela Cheia, Moldura, Duas Linhas;
+  Faraó: Bingo, 3 lados, 2 lados) mantêm o aviso "Parabéns!" (OK ou 4 s). Qualquer prêmio menor mostra o valor só **0,8 s** e some sozinho (sem botão,
+  sem confete, 2 sinos). **Festa (`jackpot`):** cartela/pirâmide 100% preenchida **sem comprar bola extra** → janela "BINGO!!!" com "CARTELA CHEIA!"/
+  "PIRÂMIDE CHEIA!", 150 confetes, raios, brilho dourado pulsando devagar (sem piscar rápido), fanfarra de ~5 s em volume máximo
+  (`playJackpot`), vibração (Android; o iPhone não vibra), fica até o OK (ou 15 s). Cartela cheia *com* bola extra comprada vale como prêmio grande normal.
+  Código: `winTier` em `round.js`, `showWin` em `ui/modals.js`, `ui/sound.js`. Teste novo: `scripts/e2e/t09.mjs`. `CACHE` → v22.
+  Só o aparelho confirma som alto e vibração.
+
+- **19e (pedido do Victor): música de fundo.** Gerada por código (WebAudio, sem arquivo), bem baixinha (notas com ganho ≈ 0,03). Duas músicas animadas:
+  Bingo (tom maior alegre) e Faraó (escala "egípcia"); troca sozinha ao mudar de modo. Só começa depois do 1º toque (regra do iPhone), para
+  quando a tela esconde, e some em **Ajustes → Música de fundo → Desligado** (guardado por aparelho em `settings.music`; "Sons: Desligado"
+  também silencia a música). Código: bloco "Música de fundo" de `ui/sound.js` (`syncMusic`, `initMusic`). Teste: `scripts/e2e/t10.mjs`. `CACHE` → v23.
+  Só o aparelho confirma se está baixa o bastante e se agrada: o volume está em `gain: 0.032` (melodia) e `0.05` (baixo) em `scheduleMusic`.

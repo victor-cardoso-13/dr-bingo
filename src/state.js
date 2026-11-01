@@ -1,4 +1,5 @@
 import { generateCards } from './engine/cards.js';
+import { MAX_PYRAMIDS, generatePyramids } from './engine/pyramids.js';
 
 // "Gaveta" do aparelho: sem conta fica em STORAGE_KEY; cada conta tem a sua (STORAGE_KEY:uid).
 // ACCOUNT_KEY lembra quem estava dentro, para o jogo abrir já com o saldo certo, até sem internet.
@@ -7,6 +8,7 @@ export const ACCOUNT_KEY = 'bingo-vovo:conta';
 export const BET_STEPS = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000];
 export const MAX_CARDS = 8;
 export const ADD_AMOUNT = 10000;
+export const MODES = ['bingo', 'farao'];
 
 // Guardamos sempre 8 cartelas; só as `cardCount` primeiras aparecem. As outras ficam com
 // active = false, então a rodada (que usa `active`) nunca as considera.
@@ -20,7 +22,12 @@ export function defaultState() {
     active: [true, true, true, true, false, false, false, false],
     cards: null,
     lastDrawn: [],
-    settings: { speed: 'normal', voice: true, sound: true, bigText: false },
+    // Modo Faraó (pirâmides): o modo e as pirâmides ficam em cada aparelho; saldo e aposta são os mesmos do Bingo.
+    mode: 'bingo',
+    pyramids: null,
+    pyramidActive: [true, true, true, true],
+    pyramidCount: 4,
+    settings: { speed: 'normal', voice: true, sound: true, music: true, bigText: false },
     stats: { rounds: 0, biggestWin: 0 },
     pendingRound: null,
     // Quando saldo, aposta, nº de cartelas ou estatísticas mudaram pela última vez (decide quem vale na nuvem).
@@ -102,6 +109,23 @@ function readDrawer(uid) {
     loaded.cards = [...loaded.cards, ...generateCards(MAX_CARDS - loaded.cards.length)];
     changed = true;
   }
+  if (!MODES.includes(loaded.mode)) loaded.mode = defaults.mode;
+  const validPyramids =
+    Array.isArray(loaded.pyramids) &&
+    loaded.pyramids.length === MAX_PYRAMIDS &&
+    loaded.pyramids.every((c) => Array.isArray(c) && c.length === 15);
+  if (!validPyramids) {
+    loaded.pyramids = generatePyramids(MAX_PYRAMIDS);
+    changed = true;
+  }
+  if (!Number.isInteger(loaded.pyramidCount) || loaded.pyramidCount < 1 || loaded.pyramidCount > MAX_PYRAMIDS) {
+    loaded.pyramidCount = defaults.pyramidCount;
+  }
+  loaded.pyramidActive = Array.from(
+    { length: MAX_PYRAMIDS },
+    (_, i) => i < loaded.pyramidCount && loaded.pyramidActive[i] !== false,
+  );
+  if (!loaded.pyramidActive.some(Boolean)) loaded.pyramidActive[0] = true;
   loaded.active = Array.from({ length: MAX_CARDS }, (_, i) => i < loaded.cardCount && loaded.active[i] === true);
   if (!loaded.active.some(Boolean)) loaded.active[0] = true;
   return { state: loaded, found, changed };
@@ -192,7 +216,7 @@ export function addCredits(amount = ADD_AMOUNT) {
 }
 
 export function activeCount(s = state) {
-  return s.active.filter(Boolean).length;
+  return (s.mode === 'farao' ? s.pyramidActive : s.active).filter(Boolean).length;
 }
 
 export function totalBet(s = state) {
@@ -201,7 +225,7 @@ export function totalBet(s = state) {
 
 export function toggleCard(i) {
   update((s) => {
-    if (i >= s.cardCount || (s.active[i] && activeCount(s) === 1)) return;
+    if (i >= s.cardCount || (s.active[i] && s.active.filter(Boolean).length === 1)) return;
     s.active[i] = !s.active[i];
   });
 }
@@ -228,6 +252,40 @@ export function stepCardCount(direction) {
 export function newCards() {
   update((s) => {
     s.cards = generateCards(MAX_CARDS);
+    s.lastDrawn = [];
+  });
+}
+
+// ===== Modo Faraó =====
+export function setMode(mode) {
+  update((s) => {
+    if (!MODES.includes(mode) || s.mode === mode) return;
+    s.mode = mode;
+    s.lastDrawn = [];
+  });
+}
+
+export function togglePyramid(i) {
+  update((s) => {
+    if (i >= s.pyramidCount || (s.pyramidActive[i] && s.pyramidActive.filter(Boolean).length === 1)) return;
+    s.pyramidActive[i] = !s.pyramidActive[i];
+  });
+}
+
+export function stepPyramidCount(direction) {
+  update((s) => {
+    const next = s.pyramidCount + direction;
+    if (next < 1 || next > MAX_PYRAMIDS) return;
+    if (direction > 0) s.pyramidActive[next - 1] = true;
+    else s.pyramidActive[s.pyramidCount - 1] = false;
+    s.pyramidCount = next;
+    if (!s.pyramidActive.some(Boolean)) s.pyramidActive[0] = true;
+  });
+}
+
+export function newPyramids() {
+  update((s) => {
+    s.pyramids = generatePyramids(MAX_PYRAMIDS);
     s.lastDrawn = [];
   });
 }
