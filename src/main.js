@@ -7,7 +7,23 @@ import { renderCards } from './ui/cards.js';
 import { renderControls } from './ui/controls.js';
 import { iniciarNuvem } from './nuvem/sincronia.js';
 
+// Duplo toque nunca dá zoom (iPad ignora o touch-action em alguns pontos). O segundo toque rápido
+// é cortado aqui; se foi num botão, o clique é feito à mão para o "+" seguido continuar rápido.
+function travarZoomDoDuploToque() {
+  let ultimo = 0;
+  document.addEventListener('touchend', (e) => {
+    const agora = e.timeStamp;
+    if (agora - ultimo < 500 && e.cancelable) {
+      e.preventDefault();
+      e.target.closest?.('button')?.click();
+    }
+    ultimo = agora;
+  }, { passive: false });
+  document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+}
+
 function start() {
+  travarZoomDoDuploToque();
   const state = loadState();
   const applyBigText = (s) => document.documentElement.classList.toggle('big-text', s.settings.bigText);
   applyBigText(state);

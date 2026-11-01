@@ -1,6 +1,6 @@
 // Toda vez que mudar qualquer arquivo do app, aumente o número em CACHE (v1 → v2…) e
 // atualize ASSETS.
-const CACHE = 'bingo-vovo-v10';
+const CACHE = 'bingo-vovo-v15';
 
 const ASSETS = [
   './',

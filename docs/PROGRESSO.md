@@ -212,3 +212,38 @@ e `node --test` (26 testes).
   (mesma solução testada por outros projetos). Só vale no modo app. Chrome: sem rolagem nem mudança de layout.
 - **Só o aparelho confirma.** Plano B se a faixa persistir: status bar `black` (exige remover e adicionar o app de novo).
 - Harness atualizado (CLAUDE.md da fábrica, APRENDIZADOS §9, `_modelo`). `CACHE` → v10; testes 39/39; t02–t07 sem FAIL.
+
+## 2026-11-01 — Sessão 17a: visual mais parecido com o Dr. Bingo (só CSS + cabeçalho da cartela)
+
+- Pedido do Victor (fotos do Dr. Bingo real, "Show Ball 3"): fundo preto com estrelas; topo em chapa de aço
+  com o saldo num visor vermelho; **+ ADICIONAR** verde com moldura dourada; painel de bolas de aço com o
+  visor verde "BOLA 5 DE 30"; cartelas brancas com borda laranja, números pretos grandes e cabeçalho
+  "CARTELA: 1 · APOSTA: 1" (prêmio da cartela logo abaixo); bola marcada em azul; barra de baixo azul-marinho
+  com friso dourado, aposta em visor, **JOGAR azul grande**. Resto (modais) não mudou.
+- Feito como bloco "Sessão 17" no fim de `css/style.css` + `src/ui/cards.js` (rótulos do cabeçalho).
+  Cor do fundo no `index.html`/manifesto: `#02030a`. Números das cartelas crescem quando sobra altura.
+- **Não publicado:** aguarda o "ok" do Victor nos prints (regra de mudança visual). `CACHE` → v11; testes 39/39; t02–t07 sem FAIL.
+- Não entrou (fora do pedido): ícones de prêmios entre as cartelas, MAX, missões, torneio, tela deitada.
+- Os 2 modos novos (Pirâmides e Sequência) ficaram para a sessão 17 (`docs/sessoes/20-sequencia.md`).
+
+## 2026-11-01 — Sessão 17b: duplo toque sem zoom (iPad)
+
+- Aconteceu zoom no duplo toque no iPad apesar do `touch-action` em `html/body/button`. Agora: `touch-action: manipulation`
+  em tudo, `touchend` rápido (< 500 ms) com `preventDefault` (clicando o botão à mão para não perder o 2º toque do "+")
+  e `dblclick` cancelado (`travarZoomDoDuploToque` em `main.js`). O pinçar para ampliar continua livre. `CACHE` → v12.
+- Só o iPad confirma.
+
+## 2026-11-01 — Sessão 18: pistas com todas as bolas sorteadas
+
+- O painel de cima mostra **todas** as bolas: 4 pistas de aço com 10 lugares (3 pistas para as 30 do sorteio,
+  a 4ª, dourada, para as até 10 extras). Cada bola nova rola da esquerda até o seu lugar (`ball-run`); lugares
+  vazios aparecem como encaixes escuros. Globo e visor verde "BOLA 10 DE 30" ficam em cima; as luzes da moldura e
+  a fileira de 10 anteriores saíram. Código em `src/ui/ballboard.js` e bloco "Sessão 18" do CSS.
+- Para as 4 cartelas continuarem cabendo sem rolar, o globo ficou menor e a altura dos números das cartelas se
+  ajusta à altura da tela (`clamp` no `.cell`). Conferido em 360×740, 390×844, 440×800 (sem rolagem).
+- `CACHE` → v13; testes 39/39.
+- **18b (pedido: "muito grande"):** pistas viraram **2 de 15** bolas (mais compridas e baixas); a pista dourada das extras
+  só aparece quando sai a 1ª extra. Números das cartelas aproveitam a altura que sobrou. `CACHE` → v14. Testes 39/39.
+- **18c (pedido: "horrível no PC"):** em tela larga o painel esticava. Agora `#app` tem `max-width: min(100%, 100dvh × 0,62)`,
+  centralizado (coluna de celular; o fundo continua na tela toda); número das bolas das pistas acompanha a largura (`cqi`).
+  Celular em pé não muda. `CACHE` → v15; testes 39/39.
