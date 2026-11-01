@@ -82,7 +82,7 @@ for (const [w, h] of [[390, 844], [440, 800]]) {
 // ---- Cenário fixo: sorteio determinístico para provar as bolas extras e a 5ª grátis ----
 import { shuffleRange } from '../../src/engine/draw.js';
 import { settlePyramids } from '../../src/engine/pyramids.js';
-const seq = shuffleRange(90, () => 0);
+const seq = Array.from({ length: 90 }, (_, i) => i + 1); // com o RNG zerado o Faraó sorteia 1, 2, 3…
 const A = Array(15).fill(0);
 [10, 11, 12, 13, 14, 0, 1, 3, 6, 2, 5].forEach((cell, k) => (A[cell] = seq[k]));
 A[9] = seq[80]; A[4] = seq[81]; A[7] = seq[82]; A[8] = seq[83];

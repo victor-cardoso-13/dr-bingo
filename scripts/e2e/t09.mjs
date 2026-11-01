@@ -53,7 +53,7 @@ await p.click('.modal__actions button');
 ok(await p.eval(`!document.querySelector('.modal') && document.querySelector('.btn-play').textContent === 'PRÓXIMA RODADA'`), 'OK fecha; PRÓXIMA RODADA');
 
 // ---------- Faraó ----------
-const sf = shuffleRange(90, zero);
+const sf = Array.from({ length: 90 }, (_, i) => i + 1); // RNG zerado: 1, 2, 3…
 const freeF = sf.slice(55);
 const pyr = (marked) => { const c = Array(15).fill(0); let a = 0, b = 0; for (let i = 0; i < 15; i++) c[i] = marked.includes(i) ? sf[a++] : freeF[b++]; return c; };
 const other = (from) => Array.from({ length: 15 }, (_, i) => sf[from + i]);

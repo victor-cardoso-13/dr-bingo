@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   generatePyramids, pyramidPattern, pyramidPrize, settlePyramids, hotPyramidCells, pyramidExtraOffer,
-  SIDES, PYRAMID_BALL_MAX,
+  SIDES, PYRAMID_BALL_MAX, drawPyramidSequence, PYRAMID_DRAW_BIAS,
 } from '../src/engine/pyramids.js';
 import { shuffleRange } from '../src/engine/draw.js';
 import { makeSeededRandomInt } from '../src/engine/rng.js';
@@ -86,4 +86,33 @@ test('pyramidExtraOffer: custo = ganho / bolas restantes, sem proposta se nada m
   assert.equal(o.cost, Math.ceil(130 / (90 - d2.size)));
   assert.deepEqual([...o.hotNumbers], [PYR[9]]);
   assert.equal(pyramidExtraOffer({ cards: [PYR], active: [false], bet: 1, drawnSet: d2 }).cost, 0);
+});
+
+test('drawPyramidSequence é uma permutação de 1..90 e a mesma semente repete', () => {
+  const cards = generatePyramids(4, makeSeededRandomInt(2));
+  const a = drawPyramidSequence(cards, [true, true, true, true], makeSeededRandomInt(5));
+  assert.deepEqual([...a].sort((x, y) => x - y), Array.from({ length: 90 }, (_, i) => i + 1));
+  assert.deepEqual(a, drawPyramidSequence(cards, [true, true, true, true], makeSeededRandomInt(5)));
+});
+
+test('empurrãozinho: mais números das pirâmides entre as 45 primeiras bolas (e só das ligadas)', () => {
+  const cards = generatePyramids(4, makeSeededRandomInt(4));
+  const rng = makeSeededRandomInt(11);
+  const mean = (bias, active) => {
+    let sum = 0;
+    const on = new Set(cards.flatMap((c, i) => (active[i] ? c : [])));
+    for (let k = 0; k < 400; k++) sum += drawPyramidSequence(cards, active, rng, bias).slice(0, 45).filter((n) => on.has(n)).length;
+    return sum / 400;
+  };
+  const all = [true, true, true, true];
+  assert.ok(Math.abs(mean(1, all) - 30) < 1, 'justo: 45 × 60/90 = 30');
+  assert.ok(mean(PYRAMID_DRAW_BIAS, all) > 34, 'com empurrão passa de 34');
+  assert.ok(mean(2, [true, false, false, false]) > 15 * 45 / 90 * 1.2, 'só conta pirâmide ligada');
+});
+
+test('bola extra mais cara quando o sorteio tem empurrãozinho; igual ao justo com bias 1', () => {
+  const d2 = drawnOf([...SIDES.base, 0, 1, 3, 6, 2, 5]);
+  const args = { cards: [PYR], active: [true], bet: 1, drawnSet: d2 };
+  assert.equal(pyramidExtraOffer({ ...args, bias: 1 }).cost, Math.ceil(130 / (90 - d2.size)));
+  assert.ok(pyramidExtraOffer({ ...args, bias: 2 }).cost > pyramidExtraOffer({ ...args, bias: 1 }).cost);
 });

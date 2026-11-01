@@ -6,6 +6,8 @@ export const PYRAMID_MAIN_BALLS = 45;
 export const PYRAMID_MAX_EXTRA = 10;
 export const FREE_EXTRA = 5; // a 5ª bola extra sai de graça
 export const MAX_PYRAMIDS = 4;
+// "Empurrãozinho": no sorteio, cada número que está numa pirâmide ligada vale 2 fichas em vez de 1 (inteiro).
+export const PYRAMID_DRAW_BIAS = 2;
 export const PYRAMID_SIZE = 15;
 
 // Índice = posição na pirâmide, de cima para baixo e da esquerda para a direita:
@@ -33,6 +35,30 @@ export function generatePyramids(count = MAX_PYRAMIDS, randomInt = cryptoRandomI
   return Array.from({ length: count }, (_, k) =>
     balls.slice(k * PYRAMID_SIZE, (k + 1) * PYRAMID_SIZE).sort((a, b) => a - b),
   );
+}
+
+// Ordem em que as 90 bolas saem. Sorteio por fichas, sem repetir: os números das pirâmides ligadas têm `bias` fichas, os outros 1.
+export function drawPyramidSequence(cards, active, randomInt = cryptoRandomInt, bias = PYRAMID_DRAW_BIAS) {
+  const on = new Set();
+  cards.forEach((pyramid, i) => {
+    if (active[i]) pyramid.forEach((n) => on.add(n));
+  });
+  const weight = (n) => (on.has(n) ? bias : 1);
+  const pool = Array.from({ length: PYRAMID_BALL_MAX }, (_, i) => i + 1);
+  let total = pool.reduce((sum, n) => sum + weight(n), 0);
+  const sequence = [];
+  while (pool.length) {
+    let ticket = randomInt(total);
+    let k = 0;
+    while (ticket >= weight(pool[k])) {
+      ticket -= weight(pool[k]);
+      k++;
+    }
+    const [n] = pool.splice(k, 1);
+    total -= weight(n);
+    sequence.push(n);
+  }
+  return sequence;
 }
 
 export function completeSides(marked) {
@@ -81,7 +107,7 @@ export function hotPyramidCells(pyramid, drawnSet) {
 
 // Proposta da próxima bola extra: só quando falta uma bola para 2 lados e/ou Bingo.
 // Mesmo cálculo do bingo (ganho médio por bola que ainda pode sair). cost 0 = sem proposta.
-export function pyramidExtraOffer({ cards, active, bet, drawnSet }) {
+export function pyramidExtraOffer({ cards, active, bet, drawnSet, bias = 1 }) {
   let totalGain = 0;
   const hotNumbers = new Set();
   cards.forEach((pyramid, i) => {
@@ -91,7 +117,13 @@ export function pyramidExtraOffer({ cards, active, bet, drawnSet }) {
       hotNumbers.add(pyramid[cell]);
     }
   });
-  const remaining = PYRAMID_BALL_MAX - drawnSet.size;
-  const cost = totalGain > 0 && remaining > 0 ? Math.max(1, Math.ceil(totalGain / remaining)) : 0;
+  // Chance de cada bola que falta sair agora = fichas dela ÷ fichas que restam (com bias 1 é 1 ÷ bolas restantes).
+  const onPyramids = new Set();
+  cards.forEach((pyramid, i) => {
+    if (active[i]) pyramid.forEach((n) => onPyramids.add(n));
+  });
+  let tickets = 0;
+  for (let n = 1; n <= PYRAMID_BALL_MAX; n++) if (!drawnSet.has(n)) tickets += onPyramids.has(n) ? bias : 1;
+  const cost = totalGain > 0 && tickets > 0 ? Math.max(1, Math.ceil((totalGain * bias) / tickets)) : 0;
   return { cost, totalGain, hotNumbers };
 }
