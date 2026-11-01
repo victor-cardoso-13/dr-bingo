@@ -291,3 +291,15 @@ e `node --test` (26 testes).
   quando a tela esconde, e some em **Ajustes → Música de fundo → Desligado** (guardado por aparelho em `settings.music`; "Sons: Desligado"
   também silencia a música). Código: bloco "Música de fundo" de `ui/sound.js` (`syncMusic`, `initMusic`). Teste: `scripts/e2e/t10.mjs`. `CACHE` → v23.
   Só o aparelho confirma se está baixa o bastante e se agrada: o volume está em `gain: 0.032` (melodia) e `0.05` (baixo) em `scheduleMusic`.
+
+- **19f (pedido: a vovó joga no iPad deitado):** em tela deitada larga (`orientation: landscape` e largura ≥ 900 px) o jogo usa a largura:
+  **Bingo com as 4 cartelas lado a lado** (números maiores) e **Faraó com as 4 pirâmides lado a lado**; painel de bolas e botões de modo
+  centralizados (40 rem), coluna até 1,5 × a altura. Em pé e no celular nada mudou. O tamanho do número das pirâmides agora acompanha a altura da casa
+  (acaba com número encavalado). Bloco "Sessão 19f" no fim do CSS. 8 cartelas deitado ainda rolam um pouco (como já rolavam). `CACHE` → v26.
+
+- **19g (pedido: "o zoom ainda está ativo"):** zoom desligado de vez, também a **pinça** (antes só o duplo toque): `viewport` com
+  `maximum-scale=1, user-scalable=no`, `touch-action: pan-x pan-y` em tudo, e `gesturestart/gesturechange/gestureend` + `touchmove` com 2 dedos
+  cancelados em `main.js`. Só o iPad confirma (o Chrome não reproduz o zoom do Safari). Plano B se ainda ampliar: pedir print/vídeo. `CACHE` → v27.
+
+- **19h (pedido: enquadrar as 8 cartelas no iPad deitado):** a altura da casa vem da altura que sobra (`cqh` no `#cards-bingo`), então 1 a 8 cartelas
+  cabem sem rolagem em 1180×820, 1194×834, 1024×768 e 1366×1024; painel de bolas mais estreito (32 rem) para sobrar altura. `CACHE` → v28.

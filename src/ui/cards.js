@@ -46,6 +46,7 @@ export function renderCards(root) {
     const locked = round.phase !== 'idle';
     // Durante a rodada, tudo vem da foto tirada no JOGAR.
     const src = locked && round.snapshot ? round.snapshot : s;
+    grid.style.setProperty('--card-rows', String(Math.ceil(s.cardCount / 4))); // iPad deitado: 4 cartelas por fileira
     const drawn = new Set(s.lastDrawn);
     const live = round.phase === 'drawing' || round.phase === 'extra';
     boxes.forEach(({ box, head, cells, foot, betTag }, i) => {

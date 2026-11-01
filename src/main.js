@@ -22,6 +22,11 @@ function travarZoomDoDuploToque() {
     ultimo = agora;
   }, { passive: false });
   document.addEventListener('dblclick', (e) => e.preventDefault(), { passive: false });
+  // Pinça (zoom) também nunca: o Safari do iPad ignora o user-scalable=no, então cortamos o gesto.
+  for (const type of ['gesturestart', 'gesturechange', 'gestureend']) {
+    document.addEventListener(type, (e) => e.preventDefault(), { passive: false });
+  }
+  document.addEventListener('touchmove', (e) => { if (e.touches.length > 1 && e.cancelable) e.preventDefault(); }, { passive: false });
 }
 
 function start() {
