@@ -1,0 +1,10 @@
+node_modules
+dist
+.DS_Store
+*.log
+# configurações locais deste Mac
+.mcp.json
+
+# anotações locais (não vão para o GitHub)
+PROMPT-*.md
+prints/

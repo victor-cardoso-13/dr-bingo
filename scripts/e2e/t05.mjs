@@ -1,0 +1,45 @@
+import { launch } from './cdp.mjs';
+const p = await launch();
+const ok = (c, m) => console.log(c ? 'OK  ' : 'FAIL', m);
+const U = 'http://localhost:8081/';
+const A = [1,13,25,37,49,2,14,26,38,50,3,15,27,39,51], B = [4,16,28,40,52,5,17,29,41,53,6,18,30,42,54];
+const BASE = [...A.filter(n=>n!==51),4,52,6,7,8,9,10,11,12,19,20,21,22,23,24,31];
+async function setup(credits) {
+  await p.goto(U);
+  await p.eval(`(()=>{const s=JSON.parse(localStorage.getItem('bingo-vovo:v1'));
+    s.cards=[${JSON.stringify(A)},${JSON.stringify(B)},${JSON.stringify(A)},${JSON.stringify(B)}];
+    s.active=[true,true,false,false]; s.bet=2; s.credits=${credits}; s.settings.speed='rapido';
+    localStorage.setItem('bingo-vovo:v1',JSON.stringify(s))})()`);
+  await p.goto(U);
+  await p.click('.btn-play');
+  await p.eval(`(async()=>{const r=(await import('/src/round.js')).getRound();
+    const base=${JSON.stringify(BASE)};const rest=Array.from({length:60},(_,i)=>i+1).filter(n=>!base.includes(n)&&n!==51&&n!==54);
+    r.sequence=[...base,51,54,...rest];})()`);
+  for (let i = 0; i < 40 && !(await p.eval(`!document.querySelector('.extra').hidden`)); i++) await p.sleep(400);
+}
+await setup(5000);
+ok((await p.text('.extra__title')) === 'Bola extra: USD 126,00', 'oferta: ' + await p.text('.extra__title'));
+ok((await p.text('.extra__count')) === 'Extra 1 de 10', 'contador: ' + await p.text('.extra__count'));
+ok(await p.eval(`document.querySelectorAll('.cell.hot').length`) === 2, '2 casas quentes');
+ok(await p.eval(`document.querySelector('.btn-play').hidden && document.querySelector('.bet').hidden`), 'painel substitui controles');
+await p.screenshot((process.argv[2] ?? '/tmp') + '/s05extra.png');
+await p.click('.extra .btn-play');
+ok((await p.text('.topbar__value')) === 'USD 4.870,00', 'pedir desconta 126: ' + await p.text('.topbar__value'));
+ok((await p.text('.ballboard__info')) === 'Extra 1 de 10', 'ballboard: ' + await p.text('.ballboard__info'));
+ok((await p.text('.extra__title')) === 'Bola extra: USD 1,00', 'recalcula: ' + await p.text('.extra__title'));
+await p.click('.extra .btn-play');
+await p.sleep(200);
+ok((await p.text('.win__text')).includes('4.006'), 'prêmio com extras: ' + await p.text('.win__text'));
+ok((await p.text('.topbar__value')) === 'USD 8.875,00', 'créditos 8.875: ' + await p.text('.topbar__value'));
+await p.screenshot((process.argv[2] ?? '/tmp') + '/s05win.png');
+// sem créditos
+await setup(4);
+ok(await p.eval(`document.querySelector('.extra .btn-play').disabled`) && (await p.text('.extra .btn-play')) === 'Dólares insuficientes', 'sem créditos desabilita');
+ok(await p.eval(`document.querySelector('.btn-add').classList.contains('pulse')`), 'Adicionar pulsa');
+await p.click('.btn-add');
+ok(await p.eval(`!document.querySelector('.extra .btn-play').disabled`), 'Adicionar libera o botão');
+await p.click('.extra .btn-end');
+await p.sleep(200);
+ok((await p.text('.win__text')).includes('240'), 'Encerrar paga sem extras: ' + await p.text('.win__text'));
+console.log('errors', p.errors);
+await p.close();
