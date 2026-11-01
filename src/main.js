@@ -5,6 +5,7 @@ import { renderTopbar } from './ui/topbar.js';
 import { renderBallboard } from './ui/ballboard.js';
 import { renderCards } from './ui/cards.js';
 import { renderControls } from './ui/controls.js';
+import { iniciarNuvem } from './nuvem/sincronia.js';
 
 function start() {
   const state = loadState();
@@ -21,6 +22,7 @@ function start() {
   renderCards(document.getElementById('cards'));
   renderControls(document.getElementById('controls'));
   recoverPendingRound();
+  iniciarNuvem();
 }
 
 const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);

@@ -31,7 +31,8 @@ dividido em sessões em [docs/sessoes/](docs/sessoes/). O registro do que já fo
 ## Regras técnicas
 
 - HTML + CSS + JavaScript puro com ES modules. **Sem build, sem bundler, sem npm install,
-  sem dependências.** O `package.json` existe só para `"type": "module"` e o script de teste.
+  sem dependências** (a única peça de fora é o SDK do Firebase da conta, carregado do gstatic
+  em `src/nuvem/conta.js`, na versão exata fixada ali). O `package.json` existe só para `"type": "module"` e o script de teste.
 - Código (variáveis, funções, arquivos) em inglês. **Todo texto que aparece na tela é em
   português do Brasil.**
 - `src/engine/` é lógica pura: **nada de DOM, `window`, `localStorage` ou `document`** ali
@@ -39,8 +40,8 @@ dividido em sessões em [docs/sessoes/](docs/sessoes/). O registro do que já fo
 - Sorteio usa `crypto.getRandomValues` (via `src/engine/rng.js`). Nunca `Math.random`.
   As funções do engine recebem o gerador como parâmetro, para os testes usarem um gerador
   com semente.
-- O estado salvo fica em `localStorage`, na chave `bingo-vovo:v1`, e só `src/state.js` mexe
-  nela.
+- O estado salvo fica em `localStorage` e só `src/state.js` mexe nele: `bingo-vovo:v1` (sem
+  conta), `bingo-vovo:v1:<uid>` (uma "gaveta" por conta) e `bingo-vovo:conta` (quem está dentro).
 - Sem fontes, imagens ou sons baixados da internet. Sons são gerados com WebAudio; ícones
   são gerados por script.
 - Unidades em `rem`, layout pensado para celular em pé (360–430 px de largura).
@@ -51,8 +52,11 @@ dividido em sessões em [docs/sessoes/](docs/sessoes/). O registro do que já fo
   "saque", "loja", "oferta". Desde a sessão 11, o dinheiro (de mentira, grátis) aparece na tela como
   **"USD 1.000.000,00"** (`formatMoney` em `src/format.js`); no código continua `credits`.
 - O botão **Adicionar** é sempre grátis, sempre visível e sem confirmação nem limite.
-- **Nenhum link externo**, nenhum anúncio, nenhum analytics, nenhuma chamada de rede depois
-  que o app carregou. O jogo funciona offline.
+- **Nenhum link externo**, nenhum anúncio, nenhum analytics. O jogo funciona offline.
+  **Única exceção de rede (login, sessão 14):** só para o Firebase `jogos-sem-anuncio`
+  (entrar e guardar o progresso), e **só para quem tem conta**: sem conta o jogo não faz
+  nenhuma chamada. O SDK só é carregado se há conta salva no aparelho ou se a pessoa toca em
+  "Entrar".
 - **Não pesquise, abra nem copie nenhum jogo existente**, incluindo sites de bingo
   comerciais: nomes, telas, artes, sons e regras vêm só do DESIGN.md.
   **Única exceção:** na sessão 09 (polimento visual e sonoro), o dono do projeto autorizou
@@ -81,3 +85,15 @@ dividido em sessões em [docs/sessoes/](docs/sessoes/). O registro do que já fo
 - Mudanças: ramo novo → commit → `gh pr create` → `gh pr merge --merge --delete-branch` →
   `gh run watch` (`export PATH="$HOME/.local/bin:$PATH"`). Lembre de subir o `CACHE` do `sw.js`.
 - Commits terminam com `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.
+
+## Conta e nuvem (login)
+
+- Padrão da fábrica: projeto Firebase único `jogos-sem-anuncio`, e-mail e senha, progresso em
+  `jogadores/{uid}/jogos/dr-bingo`. As regras (`../../Computador/firestore.rules`) já valem; não mexer.
+- `src/nuvem/conta.js` (Firebase), `sincronia.js` (quando baixar/enviar), `mesclar.js` (formato e
+  "quem mudou por último vale"; testado em `tests/mesclar.test.js`). Telas em `src/ui/conta.js`,
+  dentro dos Ajustes.
+- Vai para a nuvem: saldo, aposta, nº de cartelas e estatísticas. Ajustes (som, texto grande,
+  velocidade), cartelas e rodada em andamento ficam em cada aparelho.
+- Documento inteiro, o último a mudar vence (`sharedAt` em `state.js`); nunca somar saldos.
+- Entrar/sair de conta só com a rodada parada; trocar de gaveta recarrega a página.

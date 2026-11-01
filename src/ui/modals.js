@@ -1,6 +1,7 @@
 import { getState, update } from '../state.js';
 import { formatAmount, formatCredits, formatMoney } from '../format.js';
 import { PATTERNS } from '../engine/patterns.js';
+import { contaSection, observarSituacao } from './conta.js';
 
 const root = () => document.getElementById('modal-root');
 
@@ -185,6 +186,7 @@ export function openSettings() {
   function render() {
     const { settings, stats } = getState();
     body.replaceChildren(
+      contaSection(render),
       optionGroup('Velocidade', [['lento', 'Lento'], ['normal', 'Normal'], ['rapido', 'Rápido']], settings.speed, set('speed')),
       optionGroup('Sons', ON_OFF, settings.sound, set('sound')),
       optionGroup('Texto grande', ON_OFF, settings.bigText, set('bigText')),
@@ -238,11 +240,13 @@ export function openSettings() {
     body.append(info);
   }
   render();
+  const stop = observarSituacao(render);
 
   return openModal({
     title: 'Ajustes',
     body,
     className: 'modal--settings',
+    onClose: stop,
     actions: [{ label: 'Fechar', primary: true }],
   });
 }
