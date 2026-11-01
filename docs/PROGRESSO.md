@@ -303,3 +303,8 @@ e `node --test` (26 testes).
 
 - **19h (pedido: enquadrar as 8 cartelas no iPad deitado):** a altura da casa vem da altura que sobra (`cqh` no `#cards-bingo`), então 1 a 8 cartelas
   cabem sem rolagem em 1180×820, 1194×834, 1024×768 e 1366×1024; painel de bolas mais estreito (32 rem) para sobrar altura. `CACHE` → v28.
+
+- **19i (pedido: "a vovó não ganha nada no Faraó"): empurrãozinho médio.** O sorteio do Faraó agora é por fichas (`drawPyramidSequence`): cada número que está
+  numa pirâmide **ligada** vale **2 fichas** (`PYRAMID_DRAW_BIAS`), os outros 1; continua sem repetir e com `crypto` (sem `Math.random`). A oferta de bola extra
+  usa a mesma chance (`bias`), então o preço da extra acompanha. Bingo não mudou. Testes: 51; e2e t08/t09 (com RNG zerado o Faraó sorteia 1, 2, 3…). `CACHE` → v29.
+  Para mudar a dose: `PYRAMID_DRAW_BIAS` (1 = justo, 2 = médio, 3 = forte; precisa ser inteiro).

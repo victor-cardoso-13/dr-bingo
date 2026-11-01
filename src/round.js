@@ -1,9 +1,9 @@
 import { getState, totalBet, update } from './state.js';
-import { MAIN_BALLS, MAX_EXTRA, shuffleBalls, shuffleRange } from './engine/draw.js';
+import { MAIN_BALLS, MAX_EXTRA, shuffleBalls } from './engine/draw.js';
 import { settleRound } from './engine/payout.js';
 import { extraBallOffer } from './engine/extraBalls.js';
 import {
-  FREE_EXTRA, PYRAMID_BALL_MAX, PYRAMID_MAIN_BALLS, PYRAMID_MAX_EXTRA, pyramidExtraOffer, settlePyramids,
+  FREE_EXTRA, PYRAMID_DRAW_BIAS, PYRAMID_MAIN_BALLS, PYRAMID_MAX_EXTRA, drawPyramidSequence, pyramidExtraOffer, settlePyramids,
 } from './engine/pyramids.js';
 import { showWin } from './ui/modals.js';
 import { playBall, playJackpot, playMark, playWin } from './ui/sound.js';
@@ -17,9 +17,9 @@ export const GAMES = {
   farao: {
     mainBalls: PYRAMID_MAIN_BALLS,
     maxExtra: PYRAMID_MAX_EXTRA,
-    shuffle: () => shuffleRange(PYRAMID_BALL_MAX),
+    shuffle: ({ cards, active }) => drawPyramidSequence(cards, active),
     settle: settlePyramids,
-    offer: pyramidExtraOffer,
+    offer: (args) => pyramidExtraOffer({ ...args, bias: PYRAMID_DRAW_BIAS }),
     freeExtra: FREE_EXTRA,
     jackpotId: 'bingo',
     bigIds: ['bingo', 'sides3', 'sides2'],
@@ -187,15 +187,11 @@ export function startRound() {
   const cost = totalBet(s);
   if (round.phase !== 'idle' || s.credits < cost) return false;
   const farao = s.mode === 'farao';
-  round = {
-    phase: 'drawing',
-    mode: farao ? 'farao' : 'bingo',
-    sequence: GAMES[farao ? 'farao' : 'bingo'].shuffle(),
-    drawnCount: 0,
-    snapshot: farao
-      ? { cards: s.pyramids.map((c) => [...c]), active: [...s.pyramidActive], bet: s.bet }
-      : { cards: s.cards.map((c) => [...c]), active: [...s.active], bet: s.bet },
-  };
+  const mode = farao ? 'farao' : 'bingo';
+  const snapshot = farao
+    ? { cards: s.pyramids.map((c) => [...c]), active: [...s.pyramidActive], bet: s.bet }
+    : { cards: s.cards.map((c) => [...c]), active: [...s.active], bet: s.bet };
+  round = { phase: 'drawing', mode, sequence: GAMES[mode].shuffle(snapshot), drawnCount: 0, snapshot };
   update((st) => {
     st.credits -= cost;
     st.stats.rounds += 1;
