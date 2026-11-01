@@ -1067,7 +1067,7 @@ button:active:not(:disabled) { box-shadow: inset 0 0 0 0.1rem rgba(255, 210, 63,
   padding-block: 0.4rem;
 }
 .bet__labels { color: #cfd6ff; text-transform: uppercase; letter-spacing: 0.04em; }
-.bet__value, .bet__count {
+.bet__value, .bet__count, .bet__size {
   color: #fff;
   background: #04060f;
   border: 0.12rem solid #ffd23f;
@@ -1361,7 +1361,7 @@ html[data-mode='lotto'] body::before {
   position: absolute; right: 0.4rem; top: -0.62rem; z-index: 1; padding: 0 0.6rem; border-radius: 0.8rem;
   font-size: 0.75rem; font-weight: 900; color: #ffd23f; background: #000d; border: 0.1rem solid #ffd23f; white-space: nowrap;
 }
-.lrow { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.2rem; flex: 1; min-height: 0; }
+.lrow { display: grid; grid-template-columns: repeat(var(--n, 6), minmax(0, 1fr)); gap: 0.2rem; flex: 1; min-height: 0; container-type: inline-size; }
 .lcol { display: flex; flex-direction: column; gap: 0.1rem; min-height: 0; }
 .lcol button, .lact__btn { font-family: inherit; font-weight: 900; border: 0; min-height: 0; padding: 0; box-shadow: none; text-shadow: none; }
 .lcol__arrow {
@@ -1369,7 +1369,7 @@ html[data-mode='lotto'] body::before {
   color: #fff; background: linear-gradient(#37b24d, #1d7a2f);
 }
 .lcol__digit {
-  flex: 1; min-height: 0; padding: 0; border-radius: 0.4rem; font-size: clamp(1.3rem, 5.2cqh, 2.6rem); font-weight: 900;
+  flex: 1; min-height: 0; padding: 0; border-radius: 0.4rem; font-size: min(clamp(1.3rem, 5.2cqh, 2.6rem), calc(78cqw / var(--n, 6))); font-weight: 900;
   color: #fff; background: #06140a; border: 0.12rem solid transparent;
 }
 .lcol__digit.hit { background: #ffd23f; color: #222; border-color: #fff; }
@@ -1424,7 +1424,7 @@ html[data-mode='lotto'] body::before {
   .lcard { display: flex; flex-direction: column; padding: 0.3rem; }
   .lact { flex-direction: row; flex: none; }
   .lcard__prize { font-size: 0.95rem; top: -0.75rem; }
-  .lcol__digit { font-size: clamp(1.8rem, 9cqh, 3rem); }
+  .lcol__digit { font-size: min(clamp(1.8rem, 9cqh, 3rem), calc(78cqw / var(--n, 6))); }
   .lcol__arrow { height: 1.9rem; font-size: 1rem; }
   .lact__btn { height: 2.2rem; flex: 1; min-height: 2.2rem; font-size: 1rem; }
 }
@@ -1433,3 +1433,11 @@ html[data-mode='lotto'] body::before {
   #cards-lotto { overflow-y: auto; }
   .lotto { height: auto; min-height: 24rem; }
 }
+
+/* Lotto: 3 seletores (Aposta, Cartelas, Dezenas) e o Total em cima, no meio. */
+.bet__size { min-width: 1.4rem; text-align: center; font-weight: bold; padding-inline: 0.2rem; }
+html[data-mode='lotto'] .bet__labels { display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; }
+html[data-mode='lotto'] .bet__labels .bet__total { grid-column: 1 / -1; grid-row: 1; order: -1; text-align: center; }
+html[data-mode='lotto'] .bet__steppers { display: grid; grid-template-columns: repeat(3, 1fr); justify-items: center; gap: 0.2rem; }
+html[data-mode='lotto'] .btn-step { width: 2.1rem; min-height: 2.1rem; font-size: 1.2rem; }
+html[data-mode='lotto'] .bet__value, html[data-mode='lotto'] .bet__count, html[data-mode='lotto'] .bet__size { min-width: 1.5rem; font-size: 1.05rem; }

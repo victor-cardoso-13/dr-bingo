@@ -1,7 +1,16 @@
 import { cryptoRandomInt } from './rng.js';
 
-// Modo Lotto (sessão 20): até 4 cartelas de 6 dígitos (0–9). O sorteio tem 6 bolas; a bola k só confere com a casa k.
-export const LOTTO_DIGITS = 6;
+// Modo Lotto (sessão 20): até 4 cartelas de 6 a 9 dígitos (0–9). O sorteio tem sempre 6 bolas.
+// Com 6 dezenas a bola k só confere com a casa k; com `size` dezenas ela confere com a "janela" de casas k … k + size − 6 (acertou se o dígito está em alguma delas).
+export const LOTTO_DIGITS = 6; // bolas por rodada (e casas da cartela mínima)
+export const MAX_LOTTO_SIZE = 9; // as cartelas guardam sempre 9 dígitos; só os `size` primeiros jogam
+export const LOTTO_SIZES = [6, 7, 8, 9];
+// Preço da cartela × aposta, por quantidade de dezenas (mais casas = mais fácil acertar = mais caro, para o retorno continuar ≈ 95%).
+export const LOTTO_PRICE = { 6: 1, 7: 3, 8: 6, 9: 11 };
+// Chance média de cada bola acertar a cartela (o empurrãozinho mira nisto). Com mais casas sobe, mas sempre abaixo do que dá para alcançar com 4 cartelas
+// aleatórias, para o retorno ser o mesmo com cartelas aleatórias, copiadas ou iguais (sem brecha).
+export const LOTTO_TARGET = { 6: 0.23, 7: 0.35, 8: 0.43, 9: 0.5 };
+export const lottoTargetChance = (size) => LOTTO_TARGET[size];
 export const MAX_LOTTO = 4;
 export const LOTTO_MAIN_BALLS = 6;
 
@@ -29,21 +38,44 @@ export function decodeBall(n) {
 }
 
 export function generateLotto(count = MAX_LOTTO, randomInt = cryptoRandomInt) {
-  return Array.from({ length: count }, () => Array.from({ length: LOTTO_DIGITS }, () => randomInt(10)));
+  return Array.from({ length: count }, () => Array.from({ length: MAX_LOTTO_SIZE }, () => randomInt(10)));
 }
 
-// Sorteio das 6 bolas. Em cada casa, com chance `q` a bola copia o dígito de uma cartela ligada (escolhida ao acaso); senão sai 0–9 puro.
-// `q` é calculado casa a casa para a chance média de acerto ser sempre `hitChance`, mesmo com cartelas iguais (sem brecha).
-export function drawLotto(cards, active, randomInt = cryptoRandomInt, hitChance = LOTTO_HIT_CHANCE) {
+// Casa da cartela que a bola acertou (a 1ª da janela com o mesmo dígito), ou -1.
+export function ballCell(card, n, size = LOTTO_DIGITS) {
+  const b = decodeBall(n);
+  for (let i = b.pos; i <= b.pos + size - LOTTO_DIGITS; i++) if (card[i] === b.digit) return i;
+  return -1;
+}
+
+// Sorteio das 6 bolas. Em cada bola, com chance `q` o dígito vem de uma "escolha dirigida" (dígitos que as cartelas têm na janela da bola, mais os que mais cartelas têm); senão sai 0–9 puro.
+// `q` é calculado bola a bola para a chance média de acerto ser sempre `hitChance` (ou o máximo possível), mesmo com cartelas iguais ou linhas IGUAIS (sem brecha).
+export function drawLotto(cards, active, randomInt = cryptoRandomInt, size = LOTTO_DIGITS, hitChance = lottoTargetChance(size)) {
   const on = cards.filter((_, i) => active[i]);
   const n = on.length;
   const digits = [];
   for (let k = 0; k < LOTTO_DIGITS; k++) {
-    const counts = new Array(10).fill(0);
-    on.forEach((card) => counts[card[k]]++);
-    const same = counts.reduce((sum, c) => sum + (c / n) ** 2, 0);
-    const q = Math.min(1, Math.max(0, (hitChance - 0.1) / (same - 0.1)));
-    digits.push(randomInt(SCALE) < q * SCALE ? on[randomInt(n)][k] : randomInt(10));
+    // cover[d] = em quantas cartelas ligadas o dígito d está na janela desta bola
+    const cover = new Array(10).fill(0);
+    for (const card of on) for (const d of new Set(card.slice(k, k + size - LOTTO_DIGITS + 1))) cover[d]++;
+    const m = cover.map((c) => c / n);
+    const sumM = m.reduce((a, b) => a + b, 0);
+    const sumM2 = m.reduce((a, b) => a + b * b, 0);
+    const aimed = sumM2 / sumM; // acerto médio se sempre dirigir (dígito sorteado com peso M, a fração das cartelas que o têm na janela)
+    const natural = sumM / 10;
+    const q = aimed > natural ? Math.min(1, Math.max(0, (hitChance - natural) / (aimed - natural))) : 0;
+    if (randomInt(SCALE) < q * SCALE) {
+      let ticket = randomInt(Math.round(sumM * 1e6));
+      let d = 0;
+      for (; d < 9; d++) {
+        const w = Math.round(m[d] * 1e6);
+        if (ticket < w) break;
+        ticket -= w;
+      }
+      digits.push(d);
+    } else {
+      digits.push(randomInt(10));
+    }
   }
   const tiers = new Array(LOTTO_DIGITS).fill(0);
   if (randomInt(100) < SILVER_PERCENT) tiers[randomInt(LOTTO_DIGITS)] = 1;
@@ -55,17 +87,20 @@ export function drawLotto(cards, active, randomInt = cryptoRandomInt, hitChance 
 }
 
 // Acertos de uma cartela: hits[k] = true se a bola k saiu igual ao dígito k. Casas cujas bolas ainda não saíram ficam false.
-export function lottoHits(card, drawnSet) {
+export function lottoHits(card, drawnSet, size = LOTTO_DIGITS) {
   const hits = new Array(LOTTO_DIGITS).fill(false);
   const mults = new Array(LOTTO_DIGITS).fill(1);
+  const cells = new Array(LOTTO_DIGITS).fill(-1);
   for (const n of drawnSet) {
     const b = decodeBall(n);
-    if (b.digit === card[b.pos]) {
+    const cell = ballCell(card, n, size);
+    if (cell >= 0) {
       hits[b.pos] = true;
       mults[b.pos] = b.mult;
+      cells[b.pos] = cell;
     }
   }
-  return { hits, mults };
+  return { hits, mults, cells };
 }
 
 export function lottoPattern(hits) {
@@ -79,22 +114,22 @@ export function lottoPattern(hits) {
   return { id: `any${any}`, name: `${any} acertos`, multiplier: byAny, seq, any };
 }
 
-export function lottoPrize(card, drawnSet, bet, acc = 0) {
-  const { hits, mults } = lottoHits(card, drawnSet);
+export function lottoPrize(card, drawnSet, bet, acc = 0, size = LOTTO_DIGITS) {
+  const { hits, mults, cells } = lottoHits(card, drawnSet, size);
   const pattern = lottoPattern(hits);
-  if (!pattern) return { pattern: null, win: 0, hits, mult: 1, accWin: 0 };
+  if (!pattern) return { pattern: null, win: 0, hits, cells, mult: 1, accWin: 0 };
   // Prateada/dourada que acertou multiplica o prêmio (a maior vale; nunca multiplicam entre si).
   const mult = Math.max(...mults.filter((_, k) => hits[k]));
   const accWin = pattern.id === 'seq6' ? Math.round(acc * bet) : 0;
-  return { pattern, win: pattern.multiplier * mult * bet + accWin, hits, mult, accWin };
+  return { pattern, win: pattern.multiplier * mult * bet + accWin, hits, cells, mult, accWin };
 }
 
 // Mesmo formato dos outros modos. As cartelas em `active` pagam; `acc` é o múltiplo do Acumulado no momento do JOGAR.
-export function settleLotto({ cards, active, bet, drawnSet, acc = 0 }) {
+export function settleLotto({ cards, active, bet, drawnSet, acc = 0, size = LOTTO_DIGITS }) {
   let total = 0;
   const perCard = cards.map((card, i) => {
     if (!active[i]) return null;
-    const prize = lottoPrize(card, drawnSet, bet, acc);
+    const prize = lottoPrize(card, drawnSet, bet, acc, size);
     total += prize.win;
     return prize;
   });

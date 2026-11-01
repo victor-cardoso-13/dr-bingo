@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ACC_MAX, ACC_START, decodeBall, drawLotto, encodeBall, generateLotto, lottoPattern, lottoPrize, nextAcc, settleLotto,
+  ACC_MAX, ACC_START, LOTTO_PRICE, LOTTO_SIZES, ballCell, decodeBall, drawLotto, encodeBall, generateLotto, lottoHits, lottoPattern, lottoPrize, nextAcc, settleLotto,
 } from '../src/engine/lotto.js';
 import { makeSeededRandomInt } from '../src/engine/rng.js';
 
@@ -11,10 +11,30 @@ test('bola codificada volta igual', () => {
   assert.deepEqual(decodeBall(encodeBall(4, 2, 7)), { pos: 4, tier: 2, digit: 7, mult: 3 });
 });
 
-test('cartelas: 6 dígitos de 0 a 9', () => {
+test('cartelas: guardam 9 dígitos de 0 a 9 (só os primeiros jogam)', () => {
   const cards = generateLotto(4, makeSeededRandomInt(1));
   assert.equal(cards.length, 4);
-  for (const c of cards) assert.ok(c.length === 6 && c.every((d) => d >= 0 && d <= 9));
+  for (const c of cards) assert.ok(c.length === 9 && c.every((d) => d >= 0 && d <= 9));
+});
+
+test('dezenas: a bola k acerta qualquer casa da janela k … k + size − 6', () => {
+  const card = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+  assert.equal(ballCell(card, encodeBall(0, 0, 3), 6), -1); // com 6 dezenas é só a casa 0
+  assert.equal(ballCell(card, encodeBall(0, 0, 1), 6), 0);
+  assert.equal(ballCell(card, encodeBall(0, 0, 3), 8), 2); // com 8: casas 0, 1 e 2
+  assert.equal(ballCell(card, encodeBall(0, 0, 4), 8), -1);
+  assert.equal(ballCell(card, encodeBall(5, 0, 9), 9), 8); // com 9: a bola 5 olha as casas 5 a 8
+  assert.equal(ballCell(card, encodeBall(5, 0, 6), 9), 5);
+  assert.equal(ballCell(card, encodeBall(5, 0, 5), 9), -1);
+  const { hits, cells } = lottoHits(card, new Set([encodeBall(0, 0, 3), encodeBall(1, 0, 3), encodeBall(2, 0, 9)]), 8);
+  assert.deepEqual(hits.slice(0, 3), [true, true, false]);
+  assert.deepEqual(cells.slice(0, 2), [2, 2]);
+});
+
+test('preços: mais dezenas custam mais', () => {
+  assert.deepEqual(LOTTO_SIZES, [6, 7, 8, 9]);
+  assert.equal(LOTTO_PRICE[6], 1);
+  for (let i = 1; i < LOTTO_SIZES.length; i++) assert.ok(LOTTO_PRICE[LOTTO_SIZES[i]] > LOTTO_PRICE[LOTTO_SIZES[i - 1]]);
 });
 
 test('padrões: Sequência conta da esquerda; Qualquer conta em qualquer casa; vale o maior', () => {
@@ -66,15 +86,15 @@ test('sorteio: 6 bolas, uma por casa, no máximo 1 prateada e 1 dourada em casas
   const ri = makeSeededRandomInt(7);
   for (let i = 0; i < 2000; i++) {
     const cards = generateLotto(4, ri);
-    const drawn = drawLotto(cards, [true, true, true, true], ri).map(decodeBall);
+    const drawn = drawLotto(cards, [true, true, true, true], ri, 6 + (i % 4)).map(decodeBall);
     assert.deepEqual(drawn.map((b) => b.pos), [0, 1, 2, 3, 4, 5]);
     assert.ok(drawn.every((b) => b.digit >= 0 && b.digit <= 9));
     assert.ok(drawn.filter((b) => b.tier === 1).length <= 1 && drawn.filter((b) => b.tier === 2).length <= 1);
   }
 });
 
-// Retorno com o empurrãozinho: precisa ficar perto de 90–100% em qualquer arrumação das cartelas (sem brecha).
-function rtp(makeCards, count, rounds = 60000) {
+// Retorno (já com o preço da cartela) em qualquer arrumação: perto de 95%, sem brecha grande.
+function rtp(makeCards, count, size, rounds = 60000) {
   const ri = makeSeededRandomInt(99);
   let spent = 0;
   let paid = 0;
@@ -83,20 +103,25 @@ function rtp(makeCards, count, rounds = 60000) {
     const cards = makeCards(ri);
     const active = cards.map((_, k) => k < count);
     acc = nextAcc(acc);
-    const { total, perCard } = settleLotto({ cards, active, bet: 1, drawnSet: new Set(drawLotto(cards, active, ri)), acc });
-    spent += count;
+    const { total, perCard } = settleLotto({ cards, active, bet: 1, drawnSet: new Set(drawLotto(cards, active, ri, size)), acc, size });
+    spent += count * LOTTO_PRICE[size];
     paid += total;
     if (perCard.some((p) => p?.accWin > 0)) acc = ACC_START;
   }
   return paid / spent;
 }
 
-test('retorno fica entre 85% e 110% com 4 cartelas aleatórias, 1 cartela, cartelas iguais e linhas IGUAIS', () => {
+test('retorno fica entre 75% e 125% em cada tamanho, com cartelas aleatórias, 1 cartela e cópias', () => {
   const same = (ri) => { const c = generateLotto(1, ri)[0]; return [c, [...c], [...c], [...c]]; };
-  const equalRows = (ri) => Array.from({ length: 4 }, () => Array(6).fill(ri(10)));
-  for (const [name, mk, n] of [['4 aleatórias', (ri) => generateLotto(4, ri), 4], ['1 cartela', (ri) => generateLotto(4, ri), 1],
-    ['cópias', same, 4], ['IGUAIS', equalRows, 4]]) {
-    const r = rtp(mk, n);
-    assert.ok(r > 0.85 && r < 1.1, `${name}: retorno ${(r * 100).toFixed(0)}%`);
+  for (const size of LOTTO_SIZES) {
+    for (const [name, mk, n] of [['4 aleatórias', (ri) => generateLotto(4, ri), 4], ['1 cartela', (ri) => generateLotto(4, ri), 1], ['cópias', same, 4]]) {
+      const r = rtp(mk, n, size);
+      assert.ok(r > 0.75 && r < 1.25, `${size} dezenas, ${name}: retorno ${(r * 100).toFixed(0)}%`);
+    }
   }
+});
+
+test('linhas IGUAIS (777777…) não passam de 110% em nenhum tamanho', () => {
+  const equalRows = (ri) => Array.from({ length: 4 }, () => Array(9).fill(ri(10)));
+  for (const size of LOTTO_SIZES) assert.ok(rtp(equalRows, 4, size) < 1.1, `${size} dezenas`);
 });

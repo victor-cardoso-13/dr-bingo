@@ -1,7 +1,7 @@
 import { getState, update } from '../state.js';
 import { formatAmount, formatCredits, formatMoney } from '../format.js';
 import { PATTERNS } from '../engine/patterns.js';
-import { ANY_MULTIPLIERS, SEQ_MULTIPLIERS } from '../engine/lotto.js';
+import { ANY_MULTIPLIERS, LOTTO_PRICE, LOTTO_SIZES, SEQ_MULTIPLIERS } from '../engine/lotto.js';
 import { BINGO_MULTIPLIER, SIDES, SIDE_MULTIPLIERS } from '../engine/pyramids.js';
 import { contaSection, observarSituacao } from './conta.js';
 
@@ -234,9 +234,13 @@ export function openLottoPrizeTable() {
   const note = document.createElement('p');
   note.className = 'lprizes__note';
   note.textContent = 'Por cartela. Vale o maior prêmio. Bola prateada = ×2, dourada = ×3. Os 6 seguidos levam também o Acumulado.';
+  const price = section('Preço da cartela (quanto mais dezenas, mais fácil)', LOTTO_SIZES.map((n) => [n, LOTTO_PRICE[n]]), 'dezenas');
+  // Aqui o valor é o preço: aposta × fator.
+  price.querySelectorAll('li .nowrap').forEach((m, i) => { m.textContent = formatMoney(LOTTO_PRICE[LOTTO_SIZES[i]] * bet); });
   body.append(
     section('Sequência (seguidos, da esquerda)', entries(SEQ_MULTIPLIERS), 'seguidos'),
     section('Qualquer (em qualquer casa)', entries(ANY_MULTIPLIERS), 'acertos'),
+    price,
     note,
   );
   return openModal({ title: 'Prêmios do Lotto', body, className: 'modal--prizes', actions: [{ label: 'Fechar', primary: true }] });

@@ -5,7 +5,7 @@ import { extraBallOffer } from './engine/extraBalls.js';
 import {
   FREE_EXTRA, PYRAMID_DRAW_BIAS, PYRAMID_MAIN_BALLS, PYRAMID_MAX_EXTRA, drawPyramidSequence, pyramidExtraOffer, settlePyramids,
 } from './engine/pyramids.js';
-import { LOTTO_MAIN_BALLS, decodeBall, drawLotto, nextAcc, settleLotto, ACC_START } from './engine/lotto.js';
+import { LOTTO_MAIN_BALLS, ballCell, drawLotto, nextAcc, settleLotto, ACC_START } from './engine/lotto.js';
 import { showWin } from './ui/modals.js';
 import { playBall, playJackpot, playMark, playWin } from './ui/sound.js';
 import { keepAwake, release } from './ui/wakelock.js';
@@ -26,11 +26,11 @@ export const GAMES = {
     bigIds: ['bingo', 'sides3', 'sides2'],
     fullName: 'PIRÂMIDE CHEIA!',
   },
-  // Lotto: 6 bolas, sem bola extra. A bola k só confere com a casa k (por isso `matches` olha a posição).
+  // Lotto: 6 bolas, sem bola extra. A bola k só confere com a janela de casas dela (por isso `matches` olha a posição).
   lotto: {
     mainBalls: LOTTO_MAIN_BALLS,
     maxExtra: 0,
-    shuffle: ({ cards, active }) => drawLotto(cards, active),
+    shuffle: ({ cards, active, size }) => drawLotto(cards, active, undefined, size),
     settle: settleLotto,
     offer: () => ({ cost: 0, totalGain: 0, hotNumbers: new Set() }),
     freeExtra: 0,
@@ -38,10 +38,7 @@ export const GAMES = {
     bigIds: ['seq6', 'seq5', 'seq4', 'any5'],
     fullName: 'SEQUÊNCIA DE 6!',
     jackpotTitle: 'LOTTO!!!',
-    matches: (card, n) => {
-      const b = decodeBall(n);
-      return card[b.pos] === b.digit;
-    },
+    matches: (card, n) => ballCell(card, n, round.snapshot?.size) >= 0,
   },
 };
 const cardHasBall = (card, n) => (game().matches ? game().matches(card, n) : card.includes(n));
@@ -188,6 +185,7 @@ export function recoverPendingRound() {
     active: pending.active,
     bet: pending.bet,
     acc: pending.acc,
+    size: pending.size,
     drawnSet: new Set(drawn),
   });
   update((s) => {
@@ -213,7 +211,7 @@ export function startRound() {
   const snapshot = {
     bingo: () => ({ cards: s.cards.map((c) => [...c]), active: [...s.active], bet: s.bet }),
     farao: () => ({ cards: s.pyramids.map((c) => [...c]), active: [...s.pyramidActive], bet: s.bet }),
-    lotto: () => ({ cards: s.lotto.map((c) => [...c]), active: s.lotto.map((_, i) => i < s.lottoCount), bet: s.bet, acc: s.lottoAcc }),
+    lotto: () => ({ cards: s.lotto.map((c) => [...c]), active: s.lotto.map((_, i) => i < s.lottoCount), bet: s.bet, acc: s.lottoAcc, size: s.lottoSize }),
   }[mode]();
   round = { phase: 'drawing', mode, sequence: GAMES[mode].shuffle(snapshot), drawnCount: 0, snapshot };
   update((st) => {

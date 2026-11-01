@@ -1,6 +1,6 @@
 import { generateCards } from './engine/cards.js';
 import { MAX_PYRAMIDS, generatePyramids } from './engine/pyramids.js';
-import { ACC_MAX, ACC_START, LOTTO_DIGITS, MAX_LOTTO, generateLotto } from './engine/lotto.js';
+import { ACC_MAX, ACC_START, LOTTO_PRICE, LOTTO_SIZES, MAX_LOTTO, MAX_LOTTO_SIZE, generateLotto } from './engine/lotto.js';
 
 // "Gaveta" do aparelho: sem conta fica em STORAGE_KEY; cada conta tem a sua (STORAGE_KEY:uid).
 // ACCOUNT_KEY lembra quem estava dentro, para o jogo abrir já com o saldo certo, até sem internet.
@@ -31,6 +31,7 @@ export function defaultState() {
     // Modo Lotto: as cartelas (6 dígitos), quantas jogam e o Acumulado (um múltiplo da aposta) ficam em cada aparelho.
     lotto: null,
     lottoCount: 4,
+    lottoSize: 6,
     lottoAcc: ACC_START,
     settings: { speed: 'normal', voice: true, sound: true, music: true, bigText: false },
     stats: { rounds: 0, biggestWin: 0 },
@@ -123,15 +124,19 @@ function readDrawer(uid) {
     loaded.pyramids = generatePyramids(MAX_PYRAMIDS);
     changed = true;
   }
-  const validLotto =
-    Array.isArray(loaded.lotto) &&
-    loaded.lotto.length === MAX_LOTTO &&
-    loaded.lotto.every((c) => Array.isArray(c) && c.length === LOTTO_DIGITS && c.every((d) => Number.isInteger(d) && d >= 0 && d <= 9));
+  const okCard = (c) => Array.isArray(c) && (c.length === 6 || c.length === MAX_LOTTO_SIZE) && c.every((d) => Number.isInteger(d) && d >= 0 && d <= 9);
+  const validLotto = Array.isArray(loaded.lotto) && loaded.lotto.length === MAX_LOTTO && loaded.lotto.every(okCard);
+  if (validLotto) {
+    // Cartelas salvas com 6 dígitos (antes das "dezenas"): completa até 9.
+    if (loaded.lotto.some((c) => c.length !== MAX_LOTTO_SIZE)) changed = true;
+    loaded.lotto = loaded.lotto.map((c) => (c.length === MAX_LOTTO_SIZE ? c : [...c, ...generateLotto(1)[0].slice(c.length)]));
+  }
   if (!validLotto) {
     loaded.lotto = generateLotto(MAX_LOTTO);
     changed = true;
   }
   if (!Number.isInteger(loaded.lottoCount) || loaded.lottoCount < 1 || loaded.lottoCount > MAX_LOTTO) loaded.lottoCount = defaults.lottoCount;
+  if (!LOTTO_SIZES.includes(loaded.lottoSize)) loaded.lottoSize = defaults.lottoSize;
   if (!Number.isFinite(loaded.lottoAcc) || loaded.lottoAcc < ACC_START || loaded.lottoAcc > ACC_MAX) loaded.lottoAcc = ACC_START;
   if (!Number.isInteger(loaded.pyramidCount) || loaded.pyramidCount < 1 || loaded.pyramidCount > MAX_PYRAMIDS) {
     loaded.pyramidCount = defaults.pyramidCount;
@@ -236,7 +241,7 @@ export function activeCount(s = state) {
 }
 
 export function totalBet(s = state) {
-  return s.bet * activeCount(s);
+  return s.bet * activeCount(s) * (s.mode === 'lotto' ? LOTTO_PRICE[s.lottoSize] : 1);
 }
 
 export function toggleCard(i) {
@@ -333,6 +338,16 @@ export function stepLottoCount(direction) {
 export function newLotto() {
   update((s) => {
     s.lotto = generateLotto(MAX_LOTTO);
+    s.lastDrawn = [];
+  });
+}
+
+// Quantas dezenas (casas) cada cartela do Lotto tem: 6 a 9. Mais casas = mais fácil e mais caro.
+export function stepLottoSize(direction) {
+  update((s) => {
+    const next = LOTTO_SIZES.indexOf(s.lottoSize) + direction;
+    if (next < 0 || next >= LOTTO_SIZES.length) return;
+    s.lottoSize = LOTTO_SIZES[next];
     s.lastDrawn = [];
   });
 }
