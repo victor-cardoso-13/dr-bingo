@@ -1,11 +1,20 @@
 import {
-  BET_STEPS, MAX_CARDS, getState, newCards, newPyramids, stepBet, stepCardCount, stepPyramidCount, subscribe, totalBet,
+  BET_STEPS, MAX_CARDS, getState, newCards, newLotto, newPyramids, stepBet, stepCardCount, stepLottoCount, stepPyramidCount, subscribe, totalBet,
 } from '../state.js';
 import { MAX_PYRAMIDS } from '../engine/pyramids.js';
+import { MAX_LOTTO } from '../engine/lotto.js';
 import { formatCredits, formatMoney } from '../format.js';
-import { openPrizeTable, openPyramidPrizeTable } from './modals.js';
+import { openLottoPrizeTable, openPrizeTable, openPyramidPrizeTable } from './modals.js';
 import { playExtra } from './sound.js';
 import { GAMES, endExtras, finishDraw, getRound, requestExtra, startRound, subscribeRound } from '../round.js';
+
+// O que muda de modo para modo nos botões de baixo.
+const MODE_UI = {
+  bingo: { label: 'Cartelas', swap: 'Trocar<br>cartelas', max: MAX_CARDS, shown: (s) => s.cardCount, step: stepCardCount, fresh: newCards, prizes: openPrizeTable },
+  farao: { label: 'Pirâmides', swap: 'Trocar<br>pirâmides', max: MAX_PYRAMIDS, shown: (s) => s.pyramidCount, step: stepPyramidCount, fresh: newPyramids, prizes: openPyramidPrizeTable },
+  lotto: { label: 'Cartelas', swap: 'Sortear<br>todas', max: MAX_LOTTO, shown: (s) => s.lottoCount, step: stepLottoCount, fresh: newLotto, prizes: openLottoPrizeTable },
+};
+const ui = () => MODE_UI[getState().mode];
 
 function button(className, text) {
   const b = document.createElement('button');
@@ -84,11 +93,10 @@ export function renderControls(root) {
 
   minus.addEventListener('click', () => stepBet(-1));
   plus.addEventListener('click', () => stepBet(1));
-  const farao = () => getState().mode === 'farao';
-  count.less.addEventListener('click', () => (farao() ? stepPyramidCount(-1) : stepCardCount(-1)));
-  count.more.addEventListener('click', () => (farao() ? stepPyramidCount(1) : stepCardCount(1)));
-  swap.addEventListener('click', () => (farao() ? newPyramids() : newCards()));
-  prizes.addEventListener('click', () => (farao() ? openPyramidPrizeTable() : openPrizeTable()));
+  count.less.addEventListener('click', () => ui().step(-1));
+  count.more.addEventListener('click', () => ui().step(1));
+  swap.addEventListener('click', () => ui().fresh());
+  prizes.addEventListener('click', () => ui().prizes());
   play.addEventListener('click', startRound);
   accel.addEventListener('click', finishDraw);
   askBtn.addEventListener('click', () => {
@@ -106,13 +114,13 @@ export function renderControls(root) {
     total.textContent = `Total: ${formatMoney(cost)}`;
     minus.disabled = !idle || s.bet === BET_STEPS[0];
     plus.disabled = !idle || s.bet === BET_STEPS[BET_STEPS.length - 1];
-    const isFarao = s.mode === 'farao';
-    const shown = isFarao ? s.pyramidCount : s.cardCount;
-    countLabel.textContent = isFarao ? 'Pirâmides' : 'Cartelas';
-    swap.innerHTML = isFarao ? 'Trocar<br>pirâmides' : 'Trocar<br>cartelas';
+    const modeUi = MODE_UI[s.mode];
+    const shown = modeUi.shown(s);
+    countLabel.textContent = modeUi.label;
+    swap.innerHTML = modeUi.swap;
     count.value.textContent = String(shown);
     count.less.disabled = !idle || shown === 1;
-    count.more.disabled = !idle || shown === (isFarao ? MAX_PYRAMIDS : MAX_CARDS);
+    count.more.disabled = !idle || shown === modeUi.max;
     swap.disabled = !idle;
     const broke = s.credits < cost;
     play.disabled = !idle || broke;
