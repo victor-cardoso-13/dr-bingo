@@ -191,3 +191,14 @@ e `node --test` (26 testes).
 - Ajustes com texto grande em iPhone baixo (390×664, 393×659) ainda rolam ≈ 50 px (já rolavam antes;
   agora menos); celular deitado rola (o jogo é só em pé).
 - Testes 39/39 (novos: `mesclar.test.js` e gavetas em `state.test.js`); t02–t07 sem FAIL; `CACHE` → v8.
+
+## 2026-11-01 — Sessão 15: tela cheia no iPhone (sem faixa lisa embaixo)
+
+- **Problema (print do Victor na Tela de Início):** faixa lisa `#120c33` embaixo (≈ 55 pt) e topo da barra de
+  status com tom diferente. Causa: degradê no `body` + `#app` com `height: 100dvh`; no iOS a altura "100%"
+  fica menor que a tela.
+- **Correção:** fundo em `body::before` (fixo, `inset: 0`), `#app` com `position: fixed; inset: 0`,
+  `html` com a cor do fim do degradê. Conferido em 393×852 com área segura do iPhone emulada (topo 59,
+  base 34): o fundo vai até as quatro bordas. Não há como reproduzir o iOS de verdade aqui: o Victor confirma no aparelho.
+- Regra levada para o harness (`CLAUDE.md` da fábrica, `APRENDIZADOS.md` §9 e `_modelo/src/estilo.css`).
+- Testes 39/39; t02–t07 sem FAIL; `CACHE` → v9.
