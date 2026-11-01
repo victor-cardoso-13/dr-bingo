@@ -311,3 +311,31 @@ e `node --test` (26 testes).
 
 - **19j (a vovó ainda reclamava):** `PYRAMID_DRAW_BIAS` 2 → **3**. Simulação (extras repreçadas): ganha algo em **68%** das rodadas (era 54%), prêmio grande
   (2 lados+) em **32%** (era 18%), retorno ≈ 123%. Peso 4 daria 76% / 43%. `CACHE` → v30.
+
+## 2026-11-01 — Sessão 20: modo Lotto (4 cartelas de 6 dígitos)
+
+- **Decisões do Victor (com fotos das regras do jogo de referência, só no computador dele):** nome na tela "Lotto"; visual **A** (cassino verde e preto);
+  tabela de prêmios aprovada; fiel ao layout do iPad deitado; empurrãozinho como no Faraó; bola prateada/dourada frequentes; Acumulado de mentira que sobe;
+  só premia de **2 acertos para cima**; 3 acertos soltos pagam menos que 3 seguidos. Sem botão MAX, sem Missões.
+- **Regras:** cada cartela tem 6 dígitos (0–9) que o jogador muda com ▲▼ (ou tocando no dígito), **IGUAIS** (todos iguais ao 1º) e **SORTEAR** (só aquela linha).
+  JOGAR sorteia **6 bolas**, e a **bola k só confere com a casa k** (a regra escrita nas fotos, "todo número marca a cartela toda", dava 10.000%+ de retorno).
+  **Sequência** = acertos seguidos da esquerda: 2 ×2 · 3 ×3 · 4 ×5 · 5 ×25 · 6 ×250 (+ Acumulado). **Qualquer** = acertos em qualquer casa: 2 ×1 · 3 ×2 · 4 ×3 · 5 ×8.
+  Vale só o maior prêmio de cada cartela. Aposta por cartela × 1 a 4 cartelas (mesmos seletores do Bingo). Sem bola extra.
+- **Bola prateada (×2) e dourada (×3):** por rodada, 40% de chance de uma prateada e 20% de uma dourada, em casas diferentes. Multiplica o prêmio da cartela **se
+  a bola acertou nela**; se as duas acertaram vale **a maior (não multiplicam entre si)**. Não multiplica o Acumulado.
+- **Empurrãozinho** (`drawLotto`): em cada casa a bola copia o dígito de uma cartela ligada com uma chance `q` calculada casa a casa para a **chance média de
+  acerto ser sempre 23%** (sem empurrão seria 10%), com 1, 2, 3 ou 4 cartelas e até com cartelas iguais ou linhas IGUAIS (**sem brecha**). `LOTTO_HIT_CHANCE` em `src/engine/lotto.js`.
+- **Acumulado:** um **múltiplo da aposta** (começa em ×100, sobe ×0,1 por rodada, teto ×1000, volta a ×100 quando sai) mostrado como valor × aposta; pago a quem fizer 6 seguidos.
+  Fica em cada aparelho (`lottoAcc`), **fora** de `sharedOf`/`mesclar.js`. `lotto`, `lottoCount` e `lottoAcc` também só no aparelho; saldo, aposta e estatísticas continuam compartilhados.
+- **Retorno (simulação com o motor de verdade, 600 mil rodadas por arrumação):** **≈ 92–93% sem o Acumulado e ≈ 96–102% com ele**, igual com 4 cartelas aleatórias,
+  1 cartela, 2 cartelas, 4 cópias da mesma e linhas IGUAIS (777777…). Cada cartela ganha **algo em ≈ 42% das rodadas** (com 4 cartelas, alguma ganha em ≈ 94%);
+  prêmio ×5 ou mais em ≈ 0,5% por cartela. Teste de regressão: `tests/lotto.test.js` (retorno entre 85% e 110% nas 4 arrumações).
+- **Avisos:** 3 maiores = Sequência de 6, 5, 4 e "Qualquer 5"; os outros somem em 0,8 s. **Festa** (`jackpot`) = 6 seguidos: janela "LOTTO!!!" / "SEQUÊNCIA DE 6!" (mesmo mecanismo do Bingo/Faraó, `jackpotTitle` novo em `showWin`).
+- **Código:** `src/engine/lotto.js` (bola = `posição*100 + tipo*10 + dígito`, para o `Set` do sorteio não perder posição nem dígito repetido), `src/ui/lotto.js`, `GAMES.lotto` em `round.js`
+  (`matches` compara por posição; `maxExtra: 0` acerta direto após as 6 bolas), `MODE_UI` em `ui/controls.js`, `openLottoPrizeTable` em `ui/modals.js`, música "lotto" em `ui/sound.js`,
+  bloco "Sessão 20" no fim de `css/style.css`. Qualquer edição de dígito apaga as bolas da tela; setas e botões travam durante a rodada.
+- **Layout:** em pé (celular e iPad em pé) 4 cartelas em coluna com IGUAIS/SORTEAR ao lado dos dígitos, Acumulado e as 6 bolas em cima; tabelas só pelo botão "Prêmios".
+  **iPad deitado (≥ 900 px)** como na foto: 2 × 2 cartelas, as 6 bolas na faixa do meio, coluna da direita com Acumulado, Sequência, Qualquer e legenda ×2/×3; ocupa a largura toda.
+  Celular deitado (altura ≤ 480 px): o Lotto rola dentro da própria área. Sem rolagem em 360×740, 390×844, 440×800, 820×1180, 1180×820, 1194×834, 1024×768 e 1366×1024.
+- **Testes:** `node --test` 61/61; `scripts/e2e/t11.mjs` (Lotto completo + festa) e t02–t10 sem FAIL. `CACHE` → v31. **Não publicado** (aguarda o ok do Victor).
+  Só o aparelho confirma: toque real nas setas pequenas (1,1 rem; o toque no próprio dígito também troca), som da música e da festa, tela cheia no iPhone.

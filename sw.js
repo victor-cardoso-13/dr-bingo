@@ -1,6 +1,6 @@
 // Toda vez que mudar qualquer arquivo do app, aumente o número em CACHE (v1 → v2…) e
 // atualize ASSETS.
-const CACHE = 'bingo-vovo-v30';
+const CACHE = 'bingo-vovo-v31';
 
 const ASSETS = [
   './',
@@ -14,6 +14,7 @@ const ASSETS = [
   './src/engine/cards.js',
   './src/engine/draw.js',
   './src/engine/extraBalls.js',
+  './src/engine/lotto.js',
   './src/engine/patterns.js',
   './src/engine/payout.js',
   './src/engine/pyramids.js',
@@ -30,6 +31,7 @@ const ASSETS = [
   './src/ui/cards.js',
   './src/ui/conta.js',
   './src/ui/controls.js',
+  './src/ui/lotto.js',
   './src/ui/modals.js',
   './src/ui/modes.js',
   './src/ui/pyramids.js',

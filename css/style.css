@@ -1197,9 +1197,10 @@ html, body, #app, button, #cards, .card, .cell, .pyr, .pcell, .modal, .modal-ove
 /* o Bingo ganhou uma linha a mais no topo: números das cartelas um pouco menores */
 .cell { min-height: clamp(1.5rem, calc((100dvh - 31.6rem) / 6), 2.95rem); }
 
-#cards-bingo, #cards-farao { display: flex; flex-direction: column; flex: 1; min-height: 0; }
-html[data-mode='farao'] #cards-bingo { display: none; }
+#cards-bingo, #cards-farao, #cards-lotto { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+html:not([data-mode='bingo']) #cards-bingo { display: none; }
 html:not([data-mode='farao']) #cards-farao { display: none; }
+html:not([data-mode='lotto']) #cards-lotto { display: none; }
 .lane .slot > .ball-small .ball__num { font-size: max(0.45rem, calc(34.5cqi / var(--cols, 15))); }
 
 /* Faraó: pedra escura com tijolos e friso dourado; tijolos claros que viram ouro quando a bola sai. */
@@ -1323,4 +1324,112 @@ html[data-mode='farao'] { background-color: #14110c; }
   .cards-grid { --cellh: calc((100cqh - var(--card-rows, 1) * 3.2rem - 0.7rem) / (3 * var(--card-rows, 1))); align-content: center; margin-block: auto; }
   .cell { min-height: clamp(1.3rem, var(--cellh), 4.2rem); font-size: clamp(1.05rem, calc(var(--cellh) * 0.5), 2rem); }
   .modes, .ballboard__panel, html[data-mode='farao'] .ballboard__panel { max-width: 32rem; }
+}
+
+/* ===== Sessão 20: modo Lotto (4 cartelas de 6 dígitos, 6 bolas, Acumulado) ===== */
+html[data-mode='lotto'] #ballboard { display: none; }
+html[data-mode='lotto'] { background-color: #0a0d0a; }
+html[data-mode='lotto'] body::before {
+  background: repeating-linear-gradient(45deg, #141914 0 0.2rem, #0a0d0a 0.2rem 0.4rem), #0a0d0a;
+}
+#cards-lotto { container-type: size; }
+.lotto { display: flex; flex-direction: column; gap: 0.5rem; height: 100%; min-height: 0; padding: 0.15rem 0.45rem; }
+.ljack {
+  order: 0; flex: none; display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; flex: none;
+  padding: 0.1rem 0.7rem; border: 0.14rem solid #ffcc33; border-radius: 0.7rem; background: #16231a; color: #fff; font-weight: 800;
+}
+.ljack__label { font-size: 0.9rem; letter-spacing: 0.05em; }
+.ljack__value { font-size: 1.25rem; color: #ffcc33; white-space: nowrap; }
+.lballs { order: 1; display: flex; justify-content: center; gap: 0.4rem; flex: none; min-height: 2.7rem; align-items: center; }
+.lball {
+  position: relative; width: 2.6rem; height: 2.6rem; border-radius: 50%; display: grid; place-items: center;
+  font-size: 1.6rem; font-weight: 900; color: #222; opacity: 0.22; transform: scale(0.82);
+  background: radial-gradient(circle at 35% 30%, #fff, #ddd 60%, #aaa); box-shadow: 0 0.12rem 0.3rem rgba(0, 0, 0, 0.5);
+}
+.lball--in { opacity: 1; transform: none; animation: lball-pop 0.35s ease-out; }
+.lball--silver { background: radial-gradient(circle at 35% 30%, #fff, #cfd6dd 50%, #7f8c98); outline: 0.2rem solid #aab6c2; }
+.lball--gold { background: radial-gradient(circle at 35% 30%, #fff6b0, #ffc928 55%, #a8700a); outline: 0.2rem solid #ffc928; }
+.lball__tag { position: absolute; top: -0.55rem; right: -0.5rem; font-style: normal; font-size: 0.8rem; font-weight: 900; color: #fff; background: #000b; border-radius: 0.6rem; padding: 0 0.3rem; }
+@keyframes lball-pop { 0% { transform: scale(0.3); } 70% { transform: scale(1.12); } 100% { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .lball--in { animation: none; } }
+
+.lcard {
+  order: 2; position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 4.7rem; gap: 0.25rem; flex: 1 1 0; min-height: 0;
+  padding: 0.2rem; border: 0.14rem solid #3fbf3f; border-radius: 0.7rem; background: #16231a;
+}
+.lcard__prize {
+  position: absolute; right: 0.4rem; top: -0.62rem; z-index: 1; padding: 0 0.6rem; border-radius: 0.8rem;
+  font-size: 0.75rem; font-weight: 900; color: #ffd23f; background: #000d; border: 0.1rem solid #ffd23f; white-space: nowrap;
+}
+.lrow { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.2rem; flex: 1; min-height: 0; }
+.lcol { display: flex; flex-direction: column; gap: 0.1rem; min-height: 0; }
+.lcol button, .lact__btn { font-family: inherit; font-weight: 900; border: 0; min-height: 0; padding: 0; box-shadow: none; text-shadow: none; }
+.lcol__arrow {
+  flex: none; height: 1.1rem; border-radius: 0.35rem; font-size: 0.7rem; font-weight: 900; line-height: 1; padding: 0;
+  color: #fff; background: linear-gradient(#37b24d, #1d7a2f);
+}
+.lcol__digit {
+  flex: 1; min-height: 0; padding: 0; border-radius: 0.4rem; font-size: clamp(1.3rem, 5.2cqh, 2.6rem); font-weight: 900;
+  color: #fff; background: #06140a; border: 0.12rem solid transparent;
+}
+.lcol__digit.hit { background: #ffd23f; color: #222; border-color: #fff; }
+.lcol__digit.miss { opacity: 0.45; }
+.lcol button:disabled { opacity: 1; }
+.lcol__arrow:disabled { filter: saturate(0.6) brightness(0.8); }
+.lact { display: flex; flex-direction: column; gap: 0.25rem; }
+.lact__btn {
+  flex: 1; min-height: 0; border-radius: 0.5rem; font-size: 0.78rem; font-weight: 900; color: #fff; letter-spacing: 0.03em;
+  background: linear-gradient(#ff8a1f, #c25a00);
+}
+.lact__btn:disabled { filter: saturate(0.5) brightness(0.75); }
+/* A tabela de prêmios só aparece deitado (o botão "Prêmios" mostra a mesma coisa em pé). */
+.lside { display: contents; }
+.lside .ltable, .lside .llegend { display: none; }
+.ltable { background: #16231a; border: 0.14rem solid #3fbf3f; border-radius: 0.6rem; overflow: hidden; }
+.ltable__title { margin: 0; padding: 0.15rem 0; text-align: center; font-size: 1rem; letter-spacing: 0.05em; color: #9fd0ff; background: #2a3a30; }
+.ltable--any .ltable__title { color: #e3a8ff; }
+.ltable__row { display: flex; justify-content: space-between; align-items: center; padding: 0.12rem 0.7rem; color: #fff; font-weight: 900; font-size: 1.15rem; border-top: 0.06rem solid #ffffff22; }
+.ltable__n { color: #5fc8ff; }
+.ltable--any .ltable__n { color: #d98bff; }
+.ltable__x { color: #ffd23f; }
+.llegend { margin: 0; text-align: center; color: #fff; font-weight: 800; font-size: 1.05rem; }
+.llegend__dot { display: inline-block; width: 1.1rem; height: 1.1rem; border-radius: 50%; vertical-align: -0.2rem; }
+.llegend__dot--silver { background: radial-gradient(circle at 35% 30%, #fff, #7f8c98); }
+.llegend__dot--gold { background: radial-gradient(circle at 35% 30%, #fff6b0, #a8700a); }
+.lprizes { display: flex; flex-direction: column; gap: 0.4rem; }
+.lprizes__title { margin: 0; font-weight: 800; }
+.lprizes__list li { padding-block: 0.15rem; }
+.lprizes__note { margin: 0; font-size: 0.95rem; opacity: 0.85; }
+
+/* iPad deitado: como na foto do jogo de referência — 2 × 2 cartelas à esquerda com as bolas na faixa do meio,
+   Acumulado e as duas tabelas (Sequência, Qualquer) na coluna da direita. */
+@media (orientation: landscape) and (min-width: 900px) {
+  html[data-mode='lotto'] #app { max-width: 100%; }
+  html[data-mode='lotto'] .modes { max-width: 32rem; }
+  html[data-mode='lotto'] .bet, html[data-mode='lotto'] .controls__row { max-width: 46rem; margin-inline: auto; }
+  .lotto {
+    display: grid; gap: 0.5rem 0.9rem; padding-inline: 1rem;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 17rem;
+    grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-areas: 'c1 c2 side' 'balls balls side' 'c3 c4 side';
+    align-content: center;
+  }
+  .ljack { flex-direction: column; align-items: stretch; text-align: center; padding-block: 0.3rem; }
+  .ljack__value { font-size: 1.5rem; }
+  .lballs { grid-area: balls; min-height: 3.6rem; }
+  .lball { width: 3.4rem; height: 3.4rem; font-size: 2rem; }
+  .lcard--1 { grid-area: c1; } .lcard--2 { grid-area: c2; } .lcard--3 { grid-area: c3; } .lcard--4 { grid-area: c4; }
+  .lside { grid-area: side; display: flex; flex-direction: column; gap: 0.5rem; align-self: stretch; justify-content: center; }
+  .lside .ltable, .lside .llegend { display: block; }
+  .lcard { display: flex; flex-direction: column; padding: 0.3rem; }
+  .lact { flex-direction: row; flex: none; }
+  .lcard__prize { font-size: 0.95rem; top: -0.75rem; }
+  .lcol__digit { font-size: clamp(1.8rem, 9cqh, 3rem); }
+  .lcol__arrow { height: 1.9rem; font-size: 1rem; }
+  .lact__btn { height: 2.2rem; flex: 1; min-height: 2.2rem; font-size: 1rem; }
+}
+/* Celular deitado (baixo demais para tudo caber): o Lotto rola dentro da própria área. */
+@media (orientation: landscape) and (max-height: 480px) {
+  #cards-lotto { overflow-y: auto; }
+  .lotto { height: auto; min-height: 24rem; }
 }

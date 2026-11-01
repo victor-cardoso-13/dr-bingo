@@ -1,5 +1,6 @@
 import { generateCards } from './engine/cards.js';
 import { MAX_PYRAMIDS, generatePyramids } from './engine/pyramids.js';
+import { ACC_MAX, ACC_START, LOTTO_DIGITS, MAX_LOTTO, generateLotto } from './engine/lotto.js';
 
 // "Gaveta" do aparelho: sem conta fica em STORAGE_KEY; cada conta tem a sua (STORAGE_KEY:uid).
 // ACCOUNT_KEY lembra quem estava dentro, para o jogo abrir já com o saldo certo, até sem internet.
@@ -8,7 +9,7 @@ export const ACCOUNT_KEY = 'bingo-vovo:conta';
 export const BET_STEPS = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000];
 export const MAX_CARDS = 8;
 export const ADD_AMOUNT = 10000;
-export const MODES = ['bingo', 'farao'];
+export const MODES = ['bingo', 'farao', 'lotto'];
 
 // Guardamos sempre 8 cartelas; só as `cardCount` primeiras aparecem. As outras ficam com
 // active = false, então a rodada (que usa `active`) nunca as considera.
@@ -27,6 +28,10 @@ export function defaultState() {
     pyramids: null,
     pyramidActive: [true, true, true, true],
     pyramidCount: 4,
+    // Modo Lotto: as cartelas (6 dígitos), quantas jogam e o Acumulado (um múltiplo da aposta) ficam em cada aparelho.
+    lotto: null,
+    lottoCount: 4,
+    lottoAcc: ACC_START,
     settings: { speed: 'normal', voice: true, sound: true, music: true, bigText: false },
     stats: { rounds: 0, biggestWin: 0 },
     pendingRound: null,
@@ -118,6 +123,16 @@ function readDrawer(uid) {
     loaded.pyramids = generatePyramids(MAX_PYRAMIDS);
     changed = true;
   }
+  const validLotto =
+    Array.isArray(loaded.lotto) &&
+    loaded.lotto.length === MAX_LOTTO &&
+    loaded.lotto.every((c) => Array.isArray(c) && c.length === LOTTO_DIGITS && c.every((d) => Number.isInteger(d) && d >= 0 && d <= 9));
+  if (!validLotto) {
+    loaded.lotto = generateLotto(MAX_LOTTO);
+    changed = true;
+  }
+  if (!Number.isInteger(loaded.lottoCount) || loaded.lottoCount < 1 || loaded.lottoCount > MAX_LOTTO) loaded.lottoCount = defaults.lottoCount;
+  if (!Number.isFinite(loaded.lottoAcc) || loaded.lottoAcc < ACC_START || loaded.lottoAcc > ACC_MAX) loaded.lottoAcc = ACC_START;
   if (!Number.isInteger(loaded.pyramidCount) || loaded.pyramidCount < 1 || loaded.pyramidCount > MAX_PYRAMIDS) {
     loaded.pyramidCount = defaults.pyramidCount;
   }
@@ -216,6 +231,7 @@ export function addCredits(amount = ADD_AMOUNT) {
 }
 
 export function activeCount(s = state) {
+  if (s.mode === 'lotto') return s.lottoCount;
   return (s.mode === 'farao' ? s.pyramidActive : s.active).filter(Boolean).length;
 }
 
@@ -286,6 +302,37 @@ export function stepPyramidCount(direction) {
 export function newPyramids() {
   update((s) => {
     s.pyramids = generatePyramids(MAX_PYRAMIDS);
+    s.lastDrawn = [];
+  });
+}
+
+// ===== Modo Lotto =====
+// Qualquer mudança nos dígitos apaga as bolas da tela (para não sobrar bola antiga em cima de dígito novo).
+export function setLottoDigit(card, pos, digit) {
+  update((s) => {
+    s.lotto[card][pos] = ((digit % 10) + 10) % 10;
+    s.lastDrawn = [];
+  });
+}
+
+export function setLottoCard(card, digits) {
+  update((s) => {
+    s.lotto[card] = [...digits];
+    s.lastDrawn = [];
+  });
+}
+
+export function stepLottoCount(direction) {
+  update((s) => {
+    const next = s.lottoCount + direction;
+    if (next < 1 || next > MAX_LOTTO) return;
+    s.lottoCount = next;
+  });
+}
+
+export function newLotto() {
+  update((s) => {
+    s.lotto = generateLotto(MAX_LOTTO);
     s.lastDrawn = [];
   });
 }

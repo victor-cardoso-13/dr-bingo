@@ -141,6 +141,15 @@ const TUNES = {
       [-3, 1], [0, 1], [1, 1], [4, 1], [0, 2], [null, 2]],
     bass: [-12, -12, -7, -12, -5, -12, -7, -12],
   },
+  // Lotto: animada, tipo "máquina de loteria" (tom maior, notas saltitantes).
+  lotto: {
+    base: 293.66, bpm: 132,
+    melody: [[0, 0.5], [4, 0.5], [7, 0.5], [4, 0.5], [9, 1], [7, 1], [4, 0.5], [7, 0.5], [12, 1], [9, 1],
+      [5, 0.5], [9, 0.5], [12, 0.5], [9, 0.5], [14, 1], [12, 1], [9, 0.5], [12, 0.5], [7, 1], [4, 1],
+      [0, 0.5], [4, 0.5], [7, 0.5], [12, 0.5], [11, 1], [9, 1], [7, 1], [5, 1],
+      [4, 1], [2, 1], [0, 2], [null, 2]],
+    bass: [0, -5, -3, -7, -5, -3, -7, -12],
+  },
 };
 let music = null; // { id, note, nextTime, timer, bus }
 
@@ -183,7 +192,7 @@ function startMusic(id) {
 export function syncMusic() {
   if (!ctx) return;
   const s = getState();
-  const want = s.settings.music && s.settings.sound && !document.hidden ? (s.mode === 'farao' ? 'farao' : 'bingo') : null;
+  const want = s.settings.music && s.settings.sound && !document.hidden ? s.mode : null;
   if (music && music.id !== want) stopMusic();
   if (want && !music) startMusic(want);
 }

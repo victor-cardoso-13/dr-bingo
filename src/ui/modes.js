@@ -1,9 +1,9 @@
 import { getState, setMode, subscribe } from '../state.js';
 import { getRound, subscribeRound } from '../round.js';
 
-const MODES = [['bingo', 'Bingo'], ['farao', 'Faraó']];
+const MODES = [['bingo', 'Bingo'], ['farao', 'Faraó'], ['lotto', 'Lotto']];
 
-// Dois botões grandes: o modo só troca com a rodada parada.
+// Três botões grandes: o modo só troca com a rodada parada.
 export function renderModes(root) {
   root.innerHTML = '';
   const row = document.createElement('div');

@@ -75,6 +75,7 @@ export function renderBallboard(root) {
   };
 
   const paint = (s) => {
+    if (s.mode === 'lotto') return; // o Lotto tem as suas próprias bolas (ui/lotto.js)
     if (s.mode !== mode) build(s.mode);
     const { mainBalls: MAIN_BALLS, maxExtra: MAX_EXTRA } = GAMES[mode];
     const drawn = s.lastDrawn;

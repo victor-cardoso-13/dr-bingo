@@ -1,6 +1,7 @@
 import { getState, update } from '../state.js';
 import { formatAmount, formatCredits, formatMoney } from '../format.js';
 import { PATTERNS } from '../engine/patterns.js';
+import { ANY_MULTIPLIERS, SEQ_MULTIPLIERS } from '../engine/lotto.js';
 import { BINGO_MULTIPLIER, SIDES, SIDE_MULTIPLIERS } from '../engine/pyramids.js';
 import { contaSection, observarSituacao } from './conta.js';
 
@@ -77,7 +78,7 @@ function confetti(pieces = CONFETTI_PIECES) {
 
 // Aviso de prêmio. tier: 'small' = some sozinho em 0,8 s; 'big' (um dos 3 maiores prêmios) fica até o OK ou 4 s;
 // 'jackpot' (tudo preenchido de primeira) é a grande festa: confete, vibração e fica até o OK (ou 15 s).
-export function showWin(total, { message, onClose, tier = 'big', fullName = 'BINGO!' } = {}) {
+export function showWin(total, { message, onClose, tier = 'big', fullName = 'BINGO!', jackpotTitle = 'BINGO!!!' } = {}) {
   const body = document.createElement('div');
   body.className = 'win';
   const text = document.createElement('p');
@@ -114,7 +115,7 @@ export function showWin(total, { message, onClose, tier = 'big', fullName = 'BIN
   }
   let timer = null;
   const close = openModal({
-    title: jackpot ? 'BINGO!!!' : total > 0 ? 'Parabéns!' : 'Fim da rodada',
+    title: jackpot ? jackpotTitle : total > 0 ? 'Parabéns!' : 'Fim da rodada',
     body,
     className: `${total > 0 ? 'modal--win modal--prize' : 'modal--win'}${quick ? ' modal--quick' : ''}${jackpot ? ' modal--jackpot' : ''}`,
     actions: quick ? [] : [{ label: 'OK', primary: true }],
@@ -205,6 +206,40 @@ export function openPyramidPrizeTable() {
     className: 'modal--prizes',
     actions: [{ label: 'Fechar', primary: true }],
   });
+}
+
+export function openLottoPrizeTable() {
+  const bet = getState().bet;
+  const body = document.createElement('div');
+  body.className = 'lprizes';
+  const section = (title, rows, unit) => {
+    const box = document.createElement('div');
+    const h = document.createElement('p');
+    h.className = 'lprizes__title';
+    h.textContent = title;
+    const list = document.createElement('ul');
+    list.className = 'prize-list lprizes__list';
+    for (const [n, mult] of rows) {
+      const li = document.createElement('li');
+      const label = document.createElement('span');
+      const money = Object.assign(document.createElement('span'), { className: 'nowrap', textContent: formatMoney(mult * bet) });
+      label.append(`${n} ${unit}: `, money);
+      li.append(label);
+      list.append(li);
+    }
+    box.append(h, list);
+    return box;
+  };
+  const entries = (m) => Object.entries(m).map(([n, x]) => [Number(n), x]).reverse();
+  const note = document.createElement('p');
+  note.className = 'lprizes__note';
+  note.textContent = 'Por cartela. Vale o maior prêmio. Bola prateada = ×2, dourada = ×3. Os 6 seguidos levam também o Acumulado.';
+  body.append(
+    section('Sequência (seguidos, da esquerda)', entries(SEQ_MULTIPLIERS), 'seguidos'),
+    section('Qualquer (em qualquer casa)', entries(ANY_MULTIPLIERS), 'acertos'),
+    note,
+  );
+  return openModal({ title: 'Prêmios do Lotto', body, className: 'modal--prizes', actions: [{ label: 'Fechar', primary: true }] });
 }
 
 function optionGroup(label, options, current, onPick) {

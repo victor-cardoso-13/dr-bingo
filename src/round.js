@@ -5,6 +5,7 @@ import { extraBallOffer } from './engine/extraBalls.js';
 import {
   FREE_EXTRA, PYRAMID_DRAW_BIAS, PYRAMID_MAIN_BALLS, PYRAMID_MAX_EXTRA, drawPyramidSequence, pyramidExtraOffer, settlePyramids,
 } from './engine/pyramids.js';
+import { LOTTO_MAIN_BALLS, decodeBall, drawLotto, nextAcc, settleLotto, ACC_START } from './engine/lotto.js';
 import { showWin } from './ui/modals.js';
 import { playBall, playJackpot, playMark, playWin } from './ui/sound.js';
 import { keepAwake, release } from './ui/wakelock.js';
@@ -25,7 +26,25 @@ export const GAMES = {
     bigIds: ['bingo', 'sides3', 'sides2'],
     fullName: 'PIRÂMIDE CHEIA!',
   },
+  // Lotto: 6 bolas, sem bola extra. A bola k só confere com a casa k (por isso `matches` olha a posição).
+  lotto: {
+    mainBalls: LOTTO_MAIN_BALLS,
+    maxExtra: 0,
+    shuffle: ({ cards, active }) => drawLotto(cards, active),
+    settle: settleLotto,
+    offer: () => ({ cost: 0, totalGain: 0, hotNumbers: new Set() }),
+    freeExtra: 0,
+    jackpotId: 'seq6',
+    bigIds: ['seq6', 'seq5', 'seq4', 'any5'],
+    fullName: 'SEQUÊNCIA DE 6!',
+    jackpotTitle: 'LOTTO!!!',
+    matches: (card, n) => {
+      const b = decodeBall(n);
+      return card[b.pos] === b.digit;
+    },
+  },
 };
+const cardHasBall = (card, n) => (game().matches ? game().matches(card, n) : card.includes(n));
 const game = () => GAMES[round.mode ?? 'bingo'];
 
 const DELAYS = { lento: 1600, normal: 900, rapido: 350 };
@@ -73,7 +92,7 @@ function scheduleBall(first = false) {
 function announceBall(n) {
   playBall();
   const { cards, active } = round.snapshot;
-  if (cards.some((card, i) => active[i] && card.includes(n))) playMark();
+  if (cards.some((card, i) => active[i] && cardHasBall(card, n))) playMark();
 }
 
 function drawNextBall() {
@@ -144,6 +163,8 @@ function settle() {
     s.credits += total;
     s.stats.biggestWin = Math.max(s.stats.biggestWin, total);
     s.pendingRound = null;
+    // Lotto: o Acumulado volta ao início quando alguém acerta os 6 seguidos.
+    if (round.mode === 'lotto' && perCard.some((p) => p?.accWin > 0)) s.lottoAcc = ACC_START;
   });
   release();
   // Sem prêmio não há janela: a rodada termina e o botão vira "PRÓXIMA RODADA".
@@ -152,7 +173,7 @@ function settle() {
   if (tier === 'jackpot') playJackpot();
   else playWin(total, tier);
   setPhase('result');
-  showWin(total, { tier, fullName: game().fullName, onClose: () => setPhase('idle') });
+  showWin(total, { tier, fullName: game().fullName, jackpotTitle: game().jackpotTitle, onClose: () => setPhase('idle') });
 }
 
 // Rodada interrompida: acerta na hora, com no mínimo as 30 bolas principais.
@@ -162,10 +183,11 @@ export function recoverPendingRound() {
   const rules = GAMES[pending.mode ?? 'bingo'];
   const count = Math.max(rules.mainBalls, pending.drawnCount);
   const drawn = pending.sequence.slice(0, count);
-  const { total } = rules.settle({
+  const { total, perCard } = rules.settle({
     cards: pending.cards,
     active: pending.active,
     bet: pending.bet,
+    acc: pending.acc,
     drawnSet: new Set(drawn),
   });
   update((s) => {
@@ -173,6 +195,7 @@ export function recoverPendingRound() {
     s.stats.biggestWin = Math.max(s.stats.biggestWin, total);
     s.lastDrawn = drawn;
     s.pendingRound = null;
+    if (pending.mode === 'lotto' && perCard.some((p) => p?.accWin > 0)) s.lottoAcc = ACC_START;
   });
   round = freshRound();
   setPhase('result');
@@ -186,16 +209,18 @@ export function startRound() {
   const s = getState();
   const cost = totalBet(s);
   if (round.phase !== 'idle' || s.credits < cost) return false;
-  const farao = s.mode === 'farao';
-  const mode = farao ? 'farao' : 'bingo';
-  const snapshot = farao
-    ? { cards: s.pyramids.map((c) => [...c]), active: [...s.pyramidActive], bet: s.bet }
-    : { cards: s.cards.map((c) => [...c]), active: [...s.active], bet: s.bet };
+  const mode = s.mode;
+  const snapshot = {
+    bingo: () => ({ cards: s.cards.map((c) => [...c]), active: [...s.active], bet: s.bet }),
+    farao: () => ({ cards: s.pyramids.map((c) => [...c]), active: [...s.pyramidActive], bet: s.bet }),
+    lotto: () => ({ cards: s.lotto.map((c) => [...c]), active: s.lotto.map((_, i) => i < s.lottoCount), bet: s.bet, acc: s.lottoAcc }),
+  }[mode]();
   round = { phase: 'drawing', mode, sequence: GAMES[mode].shuffle(snapshot), drawnCount: 0, snapshot };
   update((st) => {
     st.credits -= cost;
     st.stats.rounds += 1;
     st.lastDrawn = [];
+    if (mode === 'lotto') st.lottoAcc = nextAcc(st.lottoAcc);
     st.pendingRound = { mode: round.mode, sequence: round.sequence, ...round.snapshot, drawnCount: 0 };
   });
   notify();
@@ -218,7 +243,7 @@ export function finishDraw() {
   notify();
   const { cards, active } = round.snapshot;
   playBall();
-  if (drawn.slice(before).some((n) => cards.some((card, i) => active[i] && card.includes(n)))) playMark();
+  if (drawn.slice(before).some((n) => cards.some((card, i) => active[i] && cardHasBall(card, n)))) playMark();
   finishMainDraw();
 }
 

@@ -6,6 +6,7 @@ import { renderModes } from './ui/modes.js';
 import { renderBallboard } from './ui/ballboard.js';
 import { renderCards } from './ui/cards.js';
 import { renderPyramids } from './ui/pyramids.js';
+import { renderLotto } from './ui/lotto.js';
 import { renderControls } from './ui/controls.js';
 import { iniciarNuvem } from './nuvem/sincronia.js';
 
@@ -48,9 +49,10 @@ function start() {
   renderModes(document.getElementById('modes'));
   renderBallboard(document.getElementById('ballboard'));
   const cardsArea = document.getElementById('cards');
-  cardsArea.innerHTML = '<div id="cards-bingo"></div><div id="cards-farao"></div>';
+  cardsArea.innerHTML = '<div id="cards-bingo"></div><div id="cards-farao"></div><div id="cards-lotto"></div>';
   renderCards(document.getElementById('cards-bingo'));
   renderPyramids(document.getElementById('cards-farao'));
+  renderLotto(document.getElementById('cards-lotto'));
   renderControls(document.getElementById('controls'));
   recoverPendingRound();
   iniciarNuvem();
