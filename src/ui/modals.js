@@ -1,6 +1,7 @@
 import { getState, update } from '../state.js';
 import { formatAmount, formatCredits, formatMoney } from '../format.js';
 import { PATTERNS } from '../engine/patterns.js';
+import { BINGO_MULTIPLIER, SIDES, SIDE_MULTIPLIERS } from '../engine/pyramids.js';
 import { contaSection, observarSituacao } from './conta.js';
 
 const root = () => document.getElementById('modal-root');
@@ -58,11 +59,11 @@ export function openModal({ title, body, actions = [], onClose, className = '' }
 const CONFETTI_COLORS = ['#ffd23f', '#ff7a00', '#21c45d', '#ffffff', '#ff4d8d', '#3fa9ff'];
 const CONFETTI_PIECES = 48;
 
-function confetti() {
+function confetti(pieces = CONFETTI_PIECES) {
   const box = document.createElement('div');
   box.className = 'confetti';
   box.setAttribute('aria-hidden', 'true');
-  for (let i = 0; i < CONFETTI_PIECES; i++) {
+  for (let i = 0; i < pieces; i++) {
     const piece = document.createElement('span');
     piece.style.left = `${(i * 37) % 100}%`;
     piece.style.background = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
@@ -74,8 +75,9 @@ function confetti() {
   return box;
 }
 
-// Aviso de prêmio (seção 7). Fecha ao toque ou depois de 4 s.
-export function showWin(total, { message, onClose } = {}) {
+// Aviso de prêmio. tier: 'small' = some sozinho em 0,8 s; 'big' (um dos 3 maiores prêmios) fica até o OK ou 4 s;
+// 'jackpot' (tudo preenchido de primeira) é a grande festa: confete, vibração e fica até o OK (ou 15 s).
+export function showWin(total, { message, onClose, tier = 'big', fullName = 'BINGO!' } = {}) {
   const body = document.createElement('div');
   body.className = 'win';
   const text = document.createElement('p');
@@ -101,20 +103,30 @@ export function showWin(total, { message, onClose } = {}) {
     body.append(rays);
   }
   body.append(text);
+  const quick = tier === 'small';
+  const jackpot = tier === 'jackpot';
+  if (jackpot) {
+    const big = document.createElement('p');
+    big.className = 'win__jackpot';
+    big.textContent = fullName;
+    body.prepend(big);
+    navigator.vibrate?.([200, 100, 200, 100, 400, 150, 200, 100, 600]);
+  }
   let timer = null;
   const close = openModal({
-    title: total > 0 ? 'Parabéns!' : 'Fim da rodada',
+    title: jackpot ? 'BINGO!!!' : total > 0 ? 'Parabéns!' : 'Fim da rodada',
     body,
-    className: total > 0 ? 'modal--win modal--prize' : 'modal--win',
-    actions: [{ label: 'OK', primary: true }],
+    className: `${total > 0 ? 'modal--win modal--prize' : 'modal--win'}${quick ? ' modal--quick' : ''}${jackpot ? ' modal--jackpot' : ''}`,
+    actions: quick ? [] : [{ label: 'OK', primary: true }],
     onClose: () => {
       clearTimeout(timer);
       if (onClose) onClose();
     },
   });
   // O confete cobre a tela inteira, não só a janela.
-  if (total > 0) body.closest('.modal-overlay')?.append(confetti());
-  timer = setTimeout(close, 4000);
+  if (total > 0 && !quick) body.closest('.modal-overlay')?.append(confetti(jackpot ? 150 : CONFETTI_PIECES));
+  if (jackpot) body.closest('.modal-overlay')?.classList.add('overlay--jackpot');
+  timer = setTimeout(close, quick ? 800 : jackpot ? 15000 : 4000);
   return close;
 }
 
@@ -144,6 +156,51 @@ export function openPrizeTable() {
   }
   return openModal({
     title: 'Prêmios',
+    body: list,
+    className: 'modal--prizes',
+    actions: [{ label: 'Fechar', primary: true }],
+  });
+}
+
+// Mini pirâmide (15 casas em 5 fileiras) com as casas `mask` acesas.
+function miniPyramid(mask) {
+  const box = document.createElement('div');
+  box.className = 'mini-pyr';
+  box.setAttribute('aria-hidden', 'true');
+  let idx = 0;
+  for (let r = 1; r <= 5; r++) {
+    const row = document.createElement('div');
+    for (let k = 0; k < r; k++, idx++) {
+      const c = document.createElement('span');
+      if (mask.includes(idx)) c.className = 'on';
+      row.append(c);
+    }
+    box.append(row);
+  }
+  return box;
+}
+
+export function openPyramidPrizeTable() {
+  const bet = getState().bet;
+  const all = Array.from({ length: 15 }, (_, i) => i);
+  const rows = [
+    ['Bingo', BINGO_MULTIPLIER, all],
+    ['3 lados', SIDE_MULTIPLIERS[3], [...SIDES.left, ...SIDES.right, ...SIDES.base]],
+    ['2 lados', SIDE_MULTIPLIERS[2], [...SIDES.left, ...SIDES.base]],
+    ['1 lado', SIDE_MULTIPLIERS[1], SIDES.base],
+  ];
+  const list = document.createElement('ul');
+  list.className = 'prize-list';
+  for (const [name, mult, mask] of rows) {
+    const li = document.createElement('li');
+    const label = document.createElement('span');
+    const money = Object.assign(document.createElement('span'), { className: 'nowrap', textContent: formatMoney(mult * bet) });
+    label.append(`${name}: `, money);
+    li.append(miniPyramid(mask), label);
+    list.append(li);
+  }
+  return openModal({
+    title: 'Prêmios do Faraó',
     body: list,
     className: 'modal--prizes',
     actions: [{ label: 'Fechar', primary: true }],
@@ -189,6 +246,7 @@ export function openSettings() {
       contaSection(render),
       optionGroup('Velocidade', [['lento', 'Lento'], ['normal', 'Normal'], ['rapido', 'Rápido']], settings.speed, set('speed')),
       optionGroup('Sons', ON_OFF, settings.sound, set('sound')),
+      optionGroup('Música de fundo', ON_OFF, settings.music, set('music')),
       optionGroup('Texto grande', ON_OFF, settings.bigText, set('bigText')),
     );
     const info = document.createElement('div');

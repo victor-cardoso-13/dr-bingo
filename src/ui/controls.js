@@ -1,9 +1,11 @@
-import { BET_STEPS, MAX_CARDS, getState, newCards, stepBet, stepCardCount, subscribe, totalBet } from '../state.js';
+import {
+  BET_STEPS, MAX_CARDS, getState, newCards, newPyramids, stepBet, stepCardCount, stepPyramidCount, subscribe, totalBet,
+} from '../state.js';
+import { MAX_PYRAMIDS } from '../engine/pyramids.js';
 import { formatCredits, formatMoney } from '../format.js';
-import { openPrizeTable } from './modals.js';
+import { openPrizeTable, openPyramidPrizeTable } from './modals.js';
 import { playExtra } from './sound.js';
-import { MAX_EXTRA } from '../engine/draw.js';
-import { accelerate, endExtras, finishDraw, getRound, requestExtra, startRound, subscribeRound } from '../round.js';
+import { GAMES, endExtras, finishDraw, getRound, requestExtra, startRound, subscribeRound } from '../round.js';
 
 function button(className, text) {
   const b = document.createElement('button');
@@ -58,7 +60,7 @@ export function renderControls(root) {
 
   const play = button('btn-play', 'JOGAR');
 
-  const accel = button('btn-accel', 'Acelerar');
+  const accel = button('btn-accel', 'Terminar sorteio');
 
   const extra = document.createElement('div');
   extra.className = 'extra';
@@ -69,9 +71,12 @@ export function renderControls(root) {
   extraCount.className = 'extra__count';
   const askBtn = button('btn-play', 'Pedir bola extra');
   const endBtn = button('btn-secondary btn-end', 'Encerrar');
-  extra.append(extraTitle, extraCount, askBtn, endBtn);
+  const extraButtons = document.createElement('div');
+  extraButtons.className = 'extra__buttons';
+  extraButtons.append(askBtn, endBtn);
+  extra.append(extraTitle, extraCount, extraButtons);
 
-  // Uma linha só: [Prêmios] [JOGAR / Acelerar] [Trocar cartelas].
+  // Uma linha só: [Prêmios] [JOGAR / Terminar sorteio] [Trocar cartelas].
   swap.innerHTML = 'Trocar<br>cartelas';
   swap.setAttribute('aria-label', 'Trocar cartelas');
   row.append(prizes, play, accel, swap);
@@ -79,12 +84,13 @@ export function renderControls(root) {
 
   minus.addEventListener('click', () => stepBet(-1));
   plus.addEventListener('click', () => stepBet(1));
-  count.less.addEventListener('click', () => stepCardCount(-1));
-  count.more.addEventListener('click', () => stepCardCount(1));
-  swap.addEventListener('click', newCards);
-  prizes.addEventListener('click', openPrizeTable);
+  const farao = () => getState().mode === 'farao';
+  count.less.addEventListener('click', () => (farao() ? stepPyramidCount(-1) : stepCardCount(-1)));
+  count.more.addEventListener('click', () => (farao() ? stepPyramidCount(1) : stepCardCount(1)));
+  swap.addEventListener('click', () => (farao() ? newPyramids() : newCards()));
+  prizes.addEventListener('click', () => (farao() ? openPyramidPrizeTable() : openPrizeTable()));
   play.addEventListener('click', startRound);
-  accel.addEventListener('click', () => (getRound().speedOverride ? finishDraw() : accelerate()));
+  accel.addEventListener('click', finishDraw);
   askBtn.addEventListener('click', () => {
     playExtra();
     requestExtra();
@@ -100,24 +106,29 @@ export function renderControls(root) {
     total.textContent = `Total: ${formatMoney(cost)}`;
     minus.disabled = !idle || s.bet === BET_STEPS[0];
     plus.disabled = !idle || s.bet === BET_STEPS[BET_STEPS.length - 1];
-    count.value.textContent = String(s.cardCount);
-    count.less.disabled = !idle || s.cardCount === 1;
-    count.more.disabled = !idle || s.cardCount === MAX_CARDS;
+    const isFarao = s.mode === 'farao';
+    const shown = isFarao ? s.pyramidCount : s.cardCount;
+    countLabel.textContent = isFarao ? 'Pirâmides' : 'Cartelas';
+    swap.innerHTML = isFarao ? 'Trocar<br>pirâmides' : 'Trocar<br>cartelas';
+    count.value.textContent = String(shown);
+    count.less.disabled = !idle || shown === 1;
+    count.more.disabled = !idle || shown === (isFarao ? MAX_PYRAMIDS : MAX_CARDS);
     swap.disabled = !idle;
     const broke = s.credits < cost;
     play.disabled = !idle || broke;
-    play.textContent = broke ? 'Adicione dólares' : 'JOGAR';
+    play.textContent = broke ? 'Adicione dólares' : s.lastDrawn.length > 0 ? 'PRÓXIMA RODADA' : 'JOGAR';
+    play.classList.toggle('btn-play--long', !broke && s.lastDrawn.length > 0);
     const inExtra = phase === 'extra';
     betRow.hidden = inExtra;
     row.hidden = inExtra;
     play.hidden = phase === 'drawing' || inExtra;
     accel.hidden = phase !== 'drawing';
-    accel.textContent = round.speedOverride ? 'Terminar sorteio' : 'Acelerar';
     extra.hidden = !inExtra;
     if (inExtra) {
       const price = round.offer.cost;
-      extraTitle.replaceChildren('Bola extra: ', Object.assign(document.createElement('strong'), { textContent: formatMoney(price) }));
-      extraCount.textContent = `Extra ${round.extrasUsed + 1} de ${MAX_EXTRA}`;
+      const priceText = round.offer.free ? 'GRÁTIS' : formatMoney(price);
+      extraTitle.replaceChildren('Bola extra: ', Object.assign(document.createElement('strong'), { textContent: priceText }));
+      extraCount.textContent = `Extra ${round.extrasUsed + 1} de ${GAMES[round.mode].maxExtra}`;
       const short = s.credits < price;
       askBtn.disabled = short;
       askBtn.textContent = short ? 'Dólares insuficientes' : 'Pedir bola extra';

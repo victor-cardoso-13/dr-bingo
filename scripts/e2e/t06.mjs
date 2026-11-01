@@ -24,7 +24,7 @@ ok((await p.text('.modal__title')) === 'Ajustes', 'ajustes abre');
 ok(await p.eval(`!document.querySelector('.modal').textContent.includes('Voz')`), 'sem opção Voz');
 ok((await p.text('.opt__stats')).includes('Rodadas jogadas: 7') && (await p.text('.opt__stats')).includes('Maior prêmio: USD 300,00'), 'estatísticas');
 const fs0 = await p.eval(`getComputedStyle(document.documentElement).fontSize`);
-await p.eval(`[...document.querySelectorAll('.opt')][2].querySelectorAll('button')[0].click()`);
+await p.eval(`[...document.querySelectorAll('.opt')].find((o) => o.querySelector('.opt__label')?.textContent === 'Texto grande').querySelectorAll('button')[0].click()`);
 ok((await p.eval(`getComputedStyle(document.documentElement).fontSize`)) === '21px' && fs0 === '18px', 'texto grande 18→21 px');
 await p.screenshot((process.argv[2] ?? '/tmp') + '/s06settings.png');
 await p.click('.opt__reset');
@@ -34,7 +34,7 @@ ok((await p.text('.opt__stats')).includes('Rodadas jogadas: 7'), 'Não mantém')
 await p.click('.opt__reset');
 await p.eval(`[...document.querySelectorAll('.opt__row button')].find(b=>b.textContent==='Sim').click()`);
 ok((await p.text('.opt__stats')).includes('Rodadas jogadas: 0'), 'Sim zera');
-await p.click('.modal__actions button');
+if (await p.eval(`!!document.querySelector('.modal__actions button')`)) await p.click('.modal__actions button');
 await p.goto(U);
 ok((await p.eval(`document.documentElement.classList.contains('big-text')`)), 'texto grande salvo após reload');
 // 360x740 com texto grande
@@ -55,7 +55,7 @@ for (let i = 0; i < 60 && !(await p.eval(`!!document.querySelector('.extra:not([
 if (await p.eval(`!!document.querySelector('.extra:not([hidden])')`)) await p.click('.extra .btn-end');
 await p.sleep(300);
 ok((await p.eval(`window.__spy.rel`)) >= 1, 'wake lock liberado no resultado');
-await p.click('.modal__actions button');
+if (await p.eval(`!!document.querySelector('.modal__actions button')`)) await p.click('.modal__actions button');
 // sons desligados
 await p.eval(`(()=>{const s=JSON.parse(localStorage.getItem('bingo-vovo:v1'));s.settings.sound=false;s.settings.voice=false;localStorage.setItem('bingo-vovo:v1',JSON.stringify(s))})()`);
 await p.goto(U);

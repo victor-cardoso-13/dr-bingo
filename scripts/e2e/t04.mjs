@@ -19,7 +19,7 @@ ok((await p.text('.topbar__value')) === 'USD 510,00', 'créditos 510');
 ok(await p.eval(`JSON.parse(localStorage.getItem('bingo-vovo:v1')).pendingRound===null`), 'pendingRound limpo');
 ok((await p.eval(`document.querySelectorAll('.btn-play')[0].disabled`)), 'JOGAR desabilitado com aviso aberto');
 await p.screenshot((process.argv[2] ?? '/tmp') + '/s04win.png');
-await p.click('.modal__actions button');
+if (await p.eval(`!!document.querySelector('.modal__actions button')`)) await p.click('.modal__actions button');
 ok(await p.eval(`!document.querySelector('.modal')`) && await p.eval(`!document.querySelector('.btn-play').disabled`), 'fecha e volta a idle');
 ok((await p.text('.card__foot')) === 'Linha · USD 10,00', 'rodapé: ' + await p.text('.card__foot'));
 ok(await p.eval(`JSON.parse(localStorage.getItem('bingo-vovo:v1')).stats.biggestWin`) === 10, 'biggestWin 10');
@@ -27,24 +27,26 @@ await p.click('.btn-secondary', 0);
 ok((await p.text('.prize-list li:nth-child(7)')) === 'Linha: USD 10,00', 'tabela de prêmios: ' + await p.text('.prize-list li:nth-child(7)'));
 ok((await p.eval(`document.querySelectorAll('.prize-list li').length`)) === 8, '8 desenhos');
 await p.screenshot((process.argv[2] ?? '/tmp') + '/s04prizes.png');
-await p.click('.modal__actions button');
+if (await p.eval(`!!document.querySelector('.modal__actions button')`)) await p.click('.modal__actions button');
 // 2) rodada completa
 await p.eval(`(()=>{const s=JSON.parse(localStorage.getItem('bingo-vovo:v1'));s.settings.speed='rapido';s.credits=1000;s.active=[true,true,true,true];s.bet=1;localStorage.setItem('bingo-vovo:v1',JSON.stringify(s))})()`);
 await p.goto(U);
 await p.click('.btn-play');
-for (let i = 0; i < 60 && !(await p.eval(`!!document.querySelector('.modal')`)); i++) {
+for (let i = 0; i < 60 && !(await p.eval(`!!document.querySelector('.modal') || JSON.parse(localStorage.getItem('bingo-vovo:v1')).pendingRound === null`)); i++) {
   if (await p.eval(`!document.querySelector('.extra').hidden`)) await p.click('.extra .btn-end');
   await p.sleep(400);
 }
 const msg = await p.text('.win__text');
 const st = await p.eval(`JSON.parse(localStorage.getItem('bingo-vovo:v1'))`);
-ok(!!msg, 'aviso: ' + msg);
+console.log('aviso:', msg); // sem prêmio não há janela (sessão 19b)
+ok(msg !== null || !(await p.eval(`!!document.querySelector('.modal')`)), 'sem janela quando perde');
 ok(st.pendingRound === null && st.lastDrawn.length >= 30, 'pendingRound null');
 const hotWhile = await p.eval(`document.querySelectorAll('.cell.hot').length`);
 console.log('créditos', st.credits, 'hot no aviso', hotWhile);
 await p.screenshot((process.argv[2] ?? '/tmp') + '/s04round.png');
 await p.sleep(4300);
 ok(await p.eval(`!document.querySelector('.modal')`), 'aviso fecha sozinho em 4 s');
+ok(await p.eval(`document.querySelector('.btn-play').textContent === 'PRÓXIMA RODADA'`), 'botão vira PRÓXIMA RODADA');
 // 3) fechar no meio do sorteio
 await p.eval(`(()=>{const s=JSON.parse(localStorage.getItem('bingo-vovo:v1'));s.settings.speed='normal';s.credits=1000;localStorage.setItem('bingo-vovo:v1',JSON.stringify(s))})()`);
 await p.goto(U);

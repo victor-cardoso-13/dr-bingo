@@ -1,10 +1,9 @@
 import { getState, subscribe } from '../state.js';
-import { MAIN_BALLS, MAX_EXTRA } from '../engine/draw.js';
-import { subscribeRound } from '../round.js';
+import { GAMES, subscribeRound } from '../round.js';
 
 
-// Cor da bola pela faixa de números (mesmas faixas das colunas da cartela).
-const ballClass = (n) => `ball--c${Math.min(4, Math.floor((n - 1) / 12))}`;
+// Cor da bola pela faixa de números (no Bingo, as mesmas faixas das colunas da cartela; no Faraó, 5 faixas de 18).
+const ballClass = (n, mode) => `ball--c${Math.min(4, Math.floor((n - 1) / (mode === 'farao' ? 18 : 12)))}`;
 
 function numberSpan(n) {
   const num = document.createElement('span');
@@ -13,55 +12,71 @@ function numberSpan(n) {
   return num;
 }
 
-function ball(className, n) {
+function ball(className, n, mode) {
   const b = document.createElement('span');
-  b.className = `${className} ${ballClass(n)}`;
+  b.className = `${className} ${ballClass(n, mode)}`;
   b.append(numberSpan(n));
   return b;
 }
 
-const LANE = 15; // bolas por pista: 2 pistas para as 30 do sorteio; a 3ª (extras) só aparece quando há extra
+// Bolas por pista: 2 pistas para as do sorteio; a 3ª (extras) só aparece quando há extra.
+const LANES = { bingo: [15, 15, 10], farao: [15, 15, 15, 10] };
 
 export function renderBallboard(root) {
-  root.innerHTML = '';
-  const panel = document.createElement('div');
-  panel.className = 'ballboard__panel';
+  let mode = null;
+  let current;
+  let info;
+  let slots;
+  let lanes;
+  let shown;
 
-  const globe = document.createElement('div');
-  globe.className = 'globe';
-  const current = document.createElement('div');
-  current.className = 'ball-current';
-  globe.append(current);
+  const build = (m) => {
+    mode = m;
+    shown = null;
+    const { mainBalls } = GAMES[m];
+    const sizes = LANES[m];
+    root.innerHTML = '';
+    const panel = document.createElement('div');
+    panel.className = 'ballboard__panel';
 
-  const info = document.createElement('div');
-  info.className = 'ballboard__info';
-  info.setAttribute('aria-live', 'polite');
+    const globe = document.createElement('div');
+    globe.className = 'globe';
+    current = document.createElement('div');
+    current.className = 'ball-current';
+    globe.append(current);
 
-  // Pistas de aço: cada bola sorteada rola até o seu lugar.
-  const tracks = document.createElement('div');
-  tracks.className = 'tracks';
-  tracks.setAttribute('aria-label', 'Bolas sorteadas');
-  const total = MAIN_BALLS + MAX_EXTRA;
-  const slots = Array.from({ length: total }, (_, k) => {
-    const slot = document.createElement('i');
-    slot.className = 'slot';
-    slot.style.setProperty('--i', String(k % LANE));
-    return slot;
-  });
-  const lanes = [];
-  for (let l = 0; l < Math.ceil(total / LANE); l++) {
-    const lane = document.createElement('div');
-    lane.className = l * LANE >= MAIN_BALLS ? 'lane lane--extra' : 'lane';
-    lane.append(...slots.slice(l * LANE, (l + 1) * LANE));
-    tracks.append(lane);
-    lanes.push(lane);
-  }
+    info = document.createElement('div');
+    info.className = 'ballboard__info';
+    info.setAttribute('aria-live', 'polite');
 
-  panel.append(globe, info, tracks);
-  root.append(panel);
+    // Pistas de aço: cada bola sorteada rola até o seu lugar.
+    const tracks = document.createElement('div');
+    tracks.className = 'tracks';
+    tracks.setAttribute('aria-label', 'Bolas sorteadas');
+    slots = [];
+    lanes = sizes.map((size, l) => {
+      const lane = document.createElement('div');
+      const first = sizes.slice(0, l).reduce((a, b) => a + b, 0);
+      lane.className = first >= mainBalls ? 'lane lane--extra' : 'lane';
+      lane.style.setProperty('--cols', String(Math.max(...sizes)));
+      lane.style.gridTemplateColumns = `repeat(${Math.max(...sizes)}, minmax(0, 1fr))`;
+      for (let k = 0; k < size; k++) {
+        const slot = document.createElement('i');
+        slot.className = 'slot';
+        slot.style.setProperty('--i', String(k));
+        slots.push(slot);
+        lane.append(slot);
+      }
+      tracks.append(lane);
+      return lane;
+    });
+    panel.append(globe, info, tracks);
+    root.append(panel);
+  };
 
-  let shown = null;
   const paint = (s) => {
+    if (s.mode !== mode) build(s.mode);
+    const { mainBalls: MAIN_BALLS, maxExtra: MAX_EXTRA } = GAMES[mode];
     const drawn = s.lastDrawn;
     lanes[lanes.length - 1].hidden = drawn.length <= MAIN_BALLS;
     if (drawn.length === 0) {
@@ -79,14 +94,14 @@ export function renderBallboard(root) {
         : `Bola ${drawn.length} de ${MAIN_BALLS}`;
     if (shown === drawn.length) return;
     const isNew = shown !== null && drawn.length === shown + 1;
-    current.className = `ball-current ${ballClass(last)}`;
+    current.className = `ball-current ${ballClass(last, mode)}`;
     current.replaceChildren(numberSpan(last));
     void current.offsetWidth;
     current.classList.add('ball-current--in');
     slots.forEach((slot, k) => {
       if (k >= drawn.length) return slot.replaceChildren();
       if (slot.firstChild?.dataset.n === String(drawn[k])) return;
-      const b = ball('ball-small', drawn[k]);
+      const b = ball('ball-small', drawn[k], mode);
       b.dataset.n = String(drawn[k]);
       if (isNew && k === drawn.length - 1) b.classList.add('ball-small--roll');
       slot.replaceChildren(b);

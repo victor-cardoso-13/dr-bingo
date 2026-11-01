@@ -392,3 +392,12 @@ extraBallOffer({ cards, active, bet, drawnSet })   // { cost, totalGain, hotNumb
 
 Ids dos padrões: `full`, `frame`, `twoLines`, `letterU`, `cross`, `letterT`, `line`,
 `corners`.
+
+
+## Modo Faraó (sessão 19)
+
+Segundo modo, escolhido pelos botões "Bingo | Faraó" no topo (só com a rodada parada). Mesmo saldo, aposta e botão Adicionar.
+- 1 a 4 pirâmides (padrão 4) de 15 números em 5 fileiras (1 a 5). Bolas de 1 a 90; os números das pirâmides são todos diferentes e ordenados.
+- **45 bolas** por rodada + até **10 extras**; a **5ª extra é grátis**. A extra só é oferecida quando uma bola leva a 2 lados ou mais / Bingo.
+- Prêmios (× aposta, só o maior por pirâmide): 1 lado ×3, 2 lados ×70, 3 lados ×200, Bingo ×1000. Lados: esquerda, direita e base.
+- Retorno ≈ 76% com 45 bolas, comprando todas as extras (≈ 50% sem elas; ver PROGRESSO, sessão 19). Código: `src/engine/pyramids.js`.

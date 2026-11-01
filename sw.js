@@ -1,6 +1,6 @@
 // Toda vez que mudar qualquer arquivo do app, aumente o número em CACHE (v1 → v2…) e
 // atualize ASSETS.
-const CACHE = 'bingo-vovo-v15';
+const CACHE = 'bingo-vovo-v24';
 
 const ASSETS = [
   './',
@@ -16,6 +16,7 @@ const ASSETS = [
   './src/engine/extraBalls.js',
   './src/engine/patterns.js',
   './src/engine/payout.js',
+  './src/engine/pyramids.js',
   './src/engine/rng.js',
   './src/format.js',
   './src/main.js',
@@ -30,13 +31,15 @@ const ASSETS = [
   './src/ui/conta.js',
   './src/ui/controls.js',
   './src/ui/modals.js',
+  './src/ui/modes.js',
+  './src/ui/pyramids.js',
   './src/ui/sound.js',
   './src/ui/topbar.js',
   './src/ui/wakelock.js',
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS.map((url) => new Request(url, { cache: 'reload' })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {

@@ -1,0 +1,33 @@
+// Sessão 19e: música de fundo (liga sozinha depois do 1º toque; some nos Ajustes; muda no Faraó).
+import { launch } from './cdp.mjs';
+const p = await launch();
+const ok = (c, m) => console.log(c ? 'OK  ' : 'FAIL', m);
+const URL = 'http://localhost:8081/';
+await p.goto(URL);
+await p.eval(`localStorage.setItem('bingo-vovo:v1', JSON.stringify({credits:100000,bet:1}))`);
+await p.goto(URL);
+await p.eval(`window.__osc = 0; const o = AudioContext.prototype.createOscillator; AudioContext.prototype.createOscillator = function () { window.__osc++; return o.call(this); };`);
+await p.sleep(1200);
+ok((await p.eval(`window.__osc`)) === 0, 'sem toque, sem música (o iPhone exige um toque)');
+await p.eval(`document.dispatchEvent(new PointerEvent('pointerdown'))`);
+await p.sleep(1500);
+const a = await p.eval(`window.__osc`);
+ok(a > 4, 'depois do 1º toque a música toca (' + a + ' notas)');
+await p.sleep(1500);
+ok((await p.eval(`window.__osc`)) > a, 'e continua');
+// Ajustes: opção "Música de fundo"
+await p.click('.btn-settings'); await p.sleep(200);
+const labels = await p.eval(`[...document.querySelectorAll('.opt__label')].map(e=>e.textContent)`);
+ok(labels.includes('Música de fundo'), 'Ajustes tem Música de fundo: ' + labels);
+await p.eval(`(()=>{const g=[...document.querySelectorAll('.opt')].find(o=>o.querySelector('.opt__label').textContent==='Música de fundo');g.querySelectorAll('button')[1].click();})()`);
+await p.sleep(300);
+const b = await p.eval(`window.__osc`);
+await p.sleep(1500);
+ok((await p.eval(`window.__osc`)) === b, 'desligada: para de tocar');
+ok(await p.eval(`JSON.parse(localStorage.getItem('bingo-vovo:v1')).settings.music === false`), 'escolha salva');
+await p.eval(`(()=>{const g=[...document.querySelectorAll('.opt')].find(o=>o.querySelector('.opt__label').textContent==='Música de fundo');g.querySelectorAll('button')[0].click();})()`);
+await p.sleep(1500);
+ok((await p.eval(`window.__osc`)) > b, 'ligada de novo: volta a tocar');
+await p.screenshot((process.argv[2] ?? '/tmp') + '/ajustes-musica.png');
+console.log('errors', p.errors);
+await p.close();
