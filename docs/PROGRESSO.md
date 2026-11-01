@@ -308,3 +308,6 @@ e `node --test` (26 testes).
   numa pirâmide **ligada** vale **2 fichas** (`PYRAMID_DRAW_BIAS`), os outros 1; continua sem repetir e com `crypto` (sem `Math.random`). A oferta de bola extra
   usa a mesma chance (`bias`), então o preço da extra acompanha. Bingo não mudou. Testes: 51; e2e t08/t09 (com RNG zerado o Faraó sorteia 1, 2, 3…). `CACHE` → v29.
   Para mudar a dose: `PYRAMID_DRAW_BIAS` (1 = justo, 2 = médio, 3 = forte; precisa ser inteiro).
+
+- **19j (a vovó ainda reclamava):** `PYRAMID_DRAW_BIAS` 2 → **3**. Simulação (extras repreçadas): ganha algo em **68%** das rodadas (era 54%), prêmio grande
+  (2 lados+) em **32%** (era 18%), retorno ≈ 123%. Peso 4 daria 76% / 43%. `CACHE` → v30.

@@ -6,8 +6,8 @@ export const PYRAMID_MAIN_BALLS = 45;
 export const PYRAMID_MAX_EXTRA = 10;
 export const FREE_EXTRA = 5; // a 5ª bola extra sai de graça
 export const MAX_PYRAMIDS = 4;
-// "Empurrãozinho": no sorteio, cada número que está numa pirâmide ligada vale 2 fichas em vez de 1 (inteiro).
-export const PYRAMID_DRAW_BIAS = 2;
+// "Empurrãozinho": no sorteio, cada número que está numa pirâmide ligada vale 3 fichas em vez de 1 (inteiro; 1 = sorteio justo).
+export const PYRAMID_DRAW_BIAS = 3;
 export const PYRAMID_SIZE = 15;
 
 // Índice = posição na pirâmide, de cima para baixo e da esquerda para a direita:
