@@ -1,6 +1,6 @@
 import { MAX_CARDS, getState, subscribe, toggleCard } from '../state.js';
 import { getRound, subscribeRound } from '../round.js';
-import { formatMoney } from '../format.js';
+import { formatCredits, formatMoney } from '../format.js';
 import { improvingCells } from '../engine/patterns.js';
 import { cardPrize } from '../engine/payout.js';
 
@@ -19,12 +19,17 @@ export function renderCards(root) {
     head.className = 'card__head';
     const name = document.createElement('span');
     name.className = 'card__name';
-    name.textContent = `Cartela ${i + 1}`;
+    name.textContent = `CARTELA: ${i + 1}`;
+    const betTag = document.createElement('span');
+    betTag.className = 'card__bet';
     // O prêmio atual fica no cabeçalho, logo abaixo do nome.
     const foot = document.createElement('span');
     foot.className = 'card__foot';
     foot.textContent = '—';
-    head.append(name, foot);
+    const top = document.createElement('span');
+    top.className = 'card__top';
+    top.append(name, betTag);
+    head.append(top, foot);
     head.addEventListener('click', () => toggleCard(i));
 
     const cells = document.createElement('div');
@@ -32,7 +37,7 @@ export function renderCards(root) {
 
     box.append(head, cells);
     grid.append(box);
-    return { box, head, cells, foot };
+    return { box, head, cells, foot, betTag };
   });
 
   let shownCards = null;
@@ -43,7 +48,8 @@ export function renderCards(root) {
     const src = locked && round.snapshot ? round.snapshot : s;
     const drawn = new Set(s.lastDrawn);
     const live = round.phase === 'drawing' || round.phase === 'extra';
-    boxes.forEach(({ box, head, cells, foot }, i) => {
+    boxes.forEach(({ box, head, cells, foot, betTag }, i) => {
+      betTag.replaceChildren('APOSTA: ', formatCredits(src.bet));
       box.hidden = i >= s.cardCount;
       box.classList.toggle('card--off', !s.active[i]);
       head.setAttribute('aria-pressed', String(s.active[i]));
