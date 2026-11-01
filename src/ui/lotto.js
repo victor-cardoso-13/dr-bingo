@@ -1,4 +1,4 @@
-import { ANY_MULTIPLIERS, LOTTO_DIGITS, MAX_LOTTO, SEQ_MULTIPLIERS, decodeBall, generateLotto, lottoHits, lottoPrize } from '../engine/lotto.js';
+import { ANY_MULTIPLIERS, LOTTO_DIGITS, MAX_LOTTO, MAX_LOTTO_SIZE, SEQ_MULTIPLIERS, decodeBall, generateLotto, lottoHits, lottoPrize } from '../engine/lotto.js';
 import { getState, setLottoCard, setLottoDigit, subscribe } from '../state.js';
 import { getRound, subscribeRound } from '../round.js';
 import { formatMoney } from '../format.js';
@@ -55,7 +55,7 @@ export function renderLotto(root) {
     const box = el('section', `lcard lcard--${k + 1}`);
     const prize = el('span', 'lcard__prize');
     const row = el('div', 'lrow');
-    const cols = Array.from({ length: LOTTO_DIGITS }, (_, i) => {
+    const cols = Array.from({ length: MAX_LOTTO_SIZE }, (_, i) => {
       const col = el('div', 'lcol');
       const up = button('lcol__arrow', '▲', `Aumentar dígito ${i + 1} da cartela ${k + 1}`);
       const digit = button('lcol__digit', '0', `Dígito ${i + 1} da cartela ${k + 1}: toque para trocar`);
@@ -66,12 +66,12 @@ export function renderLotto(root) {
       down.addEventListener('click', move(-1));
       col.append(up, digit, down);
       row.append(col);
-      return { up, digit, down };
+      return { col, up, digit, down };
     });
     const acts = el('div', 'lact');
     const same = button('lact__btn', 'IGUAIS', `Cartela ${k + 1}: todos os dígitos iguais ao primeiro`);
     const draw = button('lact__btn', 'SORTEAR', `Cartela ${k + 1}: sortear os dígitos`);
-    same.addEventListener('click', () => setLottoCard(k, Array(LOTTO_DIGITS).fill(getState().lotto[k][0])));
+    same.addEventListener('click', () => setLottoCard(k, Array(MAX_LOTTO_SIZE).fill(getState().lotto[k][0])));
     draw.addEventListener('click', () => setLottoCard(k, generateLotto(1)[0]));
     acts.append(same, draw);
     box.append(prize, row, acts);
@@ -99,6 +99,7 @@ export function renderLotto(root) {
     const src = locked && live ? live : { bet: s.bet, acc: s.lottoAcc };
     jackValue.textContent = formatMoney(src.acc * src.bet);
 
+    const size = locked && live ? live.size ?? 6 : s.lottoSize;
     const drawn = s.mode === 'lotto' ? s.lastDrawn : [];
     const drawnSet = new Set(drawn);
     if (shownBalls !== drawn.length) {
@@ -118,17 +119,18 @@ export function renderLotto(root) {
     cards.forEach((c, k) => {
       const card = s.lotto[k];
       c.box.hidden = k >= s.lottoCount;
-      const { hits } = lottoHits(card, drawnSet);
-      const arrived = (i) => drawn.some((x) => decodeBall(x).pos === i);
+      const { cells } = lottoHits(card, drawnSet, size);
+      const hitCells = new Set(cells.filter((x) => x >= 0));
+      c.box.querySelector('.lrow').style.setProperty('--n', String(size));
       c.cols.forEach((col, i) => {
+        col.col.hidden = i >= size;
         col.digit.textContent = String(card[i]);
-        col.digit.classList.toggle('hit', hits[i]);
-        col.digit.classList.toggle('miss', arrived(i) && !hits[i]);
+        col.digit.classList.toggle('hit', hitCells.has(i));
         for (const b of [col.up, col.digit, col.down]) b.disabled = locked;
       });
       c.same.disabled = locked;
       c.draw.disabled = locked;
-      const prize = drawn.length > 0 ? lottoPrize(card, drawnSet, src.bet, src.acc) : null;
+      const prize = drawn.length > 0 ? lottoPrize(card, drawnSet, src.bet, src.acc, size) : null;
       c.prize.hidden = !prize?.pattern;
       if (prize?.pattern) c.prize.textContent = `${prize.pattern.name}${prize.mult > 1 ? ` ×${prize.mult}` : ''} · ${formatMoney(prize.win)}`;
     });

@@ -339,3 +339,19 @@ e `node --test` (26 testes).
   Celular deitado (altura ≤ 480 px): o Lotto rola dentro da própria área. Sem rolagem em 360×740, 390×844, 440×800, 820×1180, 1180×820, 1194×834, 1024×768 e 1366×1024.
 - **Testes:** `node --test` 61/61; `scripts/e2e/t11.mjs` (Lotto completo + festa) e t02–t10 sem FAIL. `CACHE` → v31. **Não publicado** (aguarda o ok do Victor).
   Só o aparelho confirma: toque real nas setas pequenas (1,1 rem; o toque no próprio dígito também troca), som da música e da festa, tela cheia no iPhone.
+
+## 2026-11-01 — Sessão 20b: Lotto com 6 a 9 dezenas + logo novo
+
+- **Pedido da vovó:** cartela com mais casas (7, 8 ou 9), saindo sempre 6 bolas, "mais combinações possíveis". Victor aprovou o mock (`prints/mock-dezenas.html`) e o **preço justo**.
+- **Regra:** com `size` dezenas, a bola k acerta se o dígito dela está em **alguma casa da janela k … k + size − 6** (6 dezenas = só a casa k, como antes; 8 = 3 casas por bola; 9 = 4).
+  Sequência (bolas seguidas a partir da 1ª) e Qualquer (quantas das 6 bolas acertaram) e os prêmios não mudaram; **muda o preço** da cartela: aposta × `LOTTO_PRICE` = **6 → ×1, 7 → ×3, 8 → ×6, 9 → ×11**
+  (o mock mostrava ×5/×17/×40; a conta real, com o motor, deu menos, porque a chance por bola que dá para alcançar com cartelas aleatórias é menor que a do mock).
+- **Empurrãozinho:** `LOTTO_TARGET` = chance média de acerto por bola: 23% / 35% / 43% / 50% (6/7/8/9 dezenas). A bola sai com chance `q` "dirigida" (peso = fração das cartelas que têm o dígito na janela) e `q` é recalculado bola a bola
+  para a média ser a meta; as metas ficam abaixo do máximo possível com 4 cartelas aleatórias, então cartelas copiadas ou aleatórias dão o mesmo retorno.
+- **Retorno (600 mil rodadas, já com o preço):** cartelas aleatórias ≈ 96% (6), 86% (7), 90% (8), 96% (9); cartelas **copiadas** ≈ 98 / 98 / 105 / 114%; linhas **IGUAIS** (777…) ≈ 97 / 97 / 68 / 42% (o botão IGUAIS é pior que aleatório nos tamanhos grandes: a mesma dígito em todas as casas acerta menos).
+  Chance de a cartela ganhar algo: 42% / 65% / 78% / 86%. Teste: `tests/lotto.test.js` (75–125% em todo tamanho; IGUAIS < 110%).
+- **Código:** as cartelas guardam **9 dígitos** (só os `size` primeiros jogam; cartelas salvas com 6 são completadas). `state.js`: `lottoSize` (por aparelho, fora de `sharedOf`), `stepLottoSize`, `totalBet` multiplica pelo preço no Lotto.
+  `engine/lotto.js`: `ballCell`, `lottoHits(.., size)` (devolve a casa acertada), `drawLotto(.., size)`. `round.js`: `size` no snapshot/`pendingRound`. `ui/controls.js`: 3º seletor **Dezenas** (só no Lotto; Total vai para cima, no meio).
+  `ui/lotto.js`: mostra `size` colunas (o dígito acertado fica amarelo na casa da janela). `openLottoPrizeTable` ganhou a lista de preços.
+- **Logo (pedido do Victor, opção A):** bola de bingo vermelha com aro dourado, "B" e raios azuis. Ícones 192, 512, maskable 512 e apple-touch 180 gerados por `scripts/make_icons.mjs` (SVG → Chrome sem janela; substitui o `make_icons.py`).
+- **Testes:** 64/64; e2e t02–t11 sem FAIL (t11 agora cobre as dezenas); sem rolagem em 360×740 … 1366×1024 com 9 dezenas (dígito de 22 px de largura em 360×740, o menor caso). `CACHE` → v32. **Não publicado.**

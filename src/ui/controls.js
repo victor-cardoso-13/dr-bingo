@@ -1,8 +1,8 @@
 import {
-  BET_STEPS, MAX_CARDS, getState, newCards, newLotto, newPyramids, stepBet, stepCardCount, stepLottoCount, stepPyramidCount, subscribe, totalBet,
+  BET_STEPS, MAX_CARDS, getState, newCards, newLotto, newPyramids, stepBet, stepCardCount, stepLottoCount, stepLottoSize, stepPyramidCount, subscribe, totalBet,
 } from '../state.js';
 import { MAX_PYRAMIDS } from '../engine/pyramids.js';
-import { MAX_LOTTO } from '../engine/lotto.js';
+import { LOTTO_SIZES, MAX_LOTTO } from '../engine/lotto.js';
 import { formatCredits, formatMoney } from '../format.js';
 import { openLottoPrizeTable, openPrizeTable, openPyramidPrizeTable } from './modals.js';
 import { playExtra } from './sound.js';
@@ -38,7 +38,9 @@ export function renderControls(root) {
   total.className = 'bet__total';
   const countLabel = document.createElement('span');
   countLabel.textContent = 'Cartelas';
-  labels.append(betLabel, total, countLabel);
+  const sizeLabel = document.createElement('span');
+  sizeLabel.textContent = 'Dezenas';
+  labels.append(betLabel, total, countLabel, sizeLabel);
 
   const stepper = (valueClass, what) => {
     const box = document.createElement('div');
@@ -54,12 +56,13 @@ export function renderControls(root) {
   };
   const bet = stepper('bet__value', 'aposta');
   const count = stepper('bet__count', 'cartelas');
+  const size = stepper('bet__size', 'dezenas');
   const minus = bet.less;
   const plus = bet.more;
   const betValue = bet.value;
   const steppers = document.createElement('div');
   steppers.className = 'bet__steppers';
-  steppers.append(bet.box, count.box);
+  steppers.append(bet.box, count.box, size.box);
   betRow.append(labels, steppers);
 
   const row = document.createElement('div');
@@ -95,6 +98,8 @@ export function renderControls(root) {
   plus.addEventListener('click', () => stepBet(1));
   count.less.addEventListener('click', () => ui().step(-1));
   count.more.addEventListener('click', () => ui().step(1));
+  size.less.addEventListener('click', () => stepLottoSize(-1));
+  size.more.addEventListener('click', () => stepLottoSize(1));
   swap.addEventListener('click', () => ui().fresh());
   prizes.addEventListener('click', () => ui().prizes());
   play.addEventListener('click', startRound);
@@ -121,6 +126,11 @@ export function renderControls(root) {
     count.value.textContent = String(shown);
     count.less.disabled = !idle || shown === 1;
     count.more.disabled = !idle || shown === modeUi.max;
+    const lotto = s.mode === 'lotto';
+    sizeLabel.hidden = size.box.hidden = !lotto;
+    size.value.textContent = String(s.lottoSize);
+    size.less.disabled = !idle || s.lottoSize === LOTTO_SIZES[0];
+    size.more.disabled = !idle || s.lottoSize === LOTTO_SIZES[LOTTO_SIZES.length - 1];
     swap.disabled = !idle;
     const broke = s.credits < cost;
     play.disabled = !idle || broke;
