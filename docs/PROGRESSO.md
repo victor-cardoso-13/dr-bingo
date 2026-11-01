@@ -202,3 +202,13 @@ e `node --test` (26 testes).
   base 34): o fundo vai até as quatro bordas. Não há como reproduzir o iOS de verdade aqui: o Victor confirma no aparelho.
 - Regra levada para o harness (`CLAUDE.md` da fábrica, `APRENDIZADOS.md` §9 e `_modelo/src/estilo.css`).
 - Testes 39/39; t02–t07 sem FAIL; `CACHE` → v9.
+
+## 2026-11-01 — Sessão 16: faixa embaixo continuava (iOS 26, WebKit 301108)
+
+- A correção da sessão 15 (fundo fixo) não bastou: no iOS 26 a janela do app fica menor que a tela pela
+  altura da barra de status e o WebKit não desenha conteúdo fixo ali. A faixa tinha a cor do
+  `background_color` do manifesto e a altura da barra de status (≈ 62 pt no print).
+- **Correção:** `@media (display-mode: standalone) { html { min-height: min(100lvh, calc(100% + env(safe-area-inset-top))); } }`
+  (mesma solução testada por outros projetos). Só vale no modo app. Chrome: sem rolagem nem mudança de layout.
+- **Só o aparelho confirma.** Plano B se a faixa persistir: status bar `black` (exige remover e adicionar o app de novo).
+- Harness atualizado (CLAUDE.md da fábrica, APRENDIZADOS §9, `_modelo`). `CACHE` → v10; testes 39/39; t02–t07 sem FAIL.

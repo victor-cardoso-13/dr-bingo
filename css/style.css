@@ -23,9 +23,16 @@ html, body {
   margin: 0;
 }
 
-/* iPhone/iPad na Tela de Início: a altura "100%" do html pode ser menor que a tela e sobrar uma
-   faixa lisa embaixo. Por isso o fundo e o #app ficam fixos na tela inteira (position: fixed;
-   inset: 0), e a cor do html é a do fim do degradê, para qualquer sobra sumir. */
+/* iPhone/iPad na Tela de Início (iOS 26, bug WebKit 301108): com status-bar "black-translucent" +
+   viewport-fit=cover, a janela do app fica MENOR que a tela (pela altura da barra de status) e o
+   WebKit nem desenha o conteúdo fixo ali: sobra uma faixa lisa embaixo. O iOS só dá a janela inteira
+   se a página for pelo menos tão alta quanto a tela. O min() com 100lvh evita rolagem onde o
+   recuo do topo é 0 (WebKit 316008). Só vale no modo app; no navegador nada muda. */
+@media (display-mode: standalone) {
+  html { min-height: min(100lvh, calc(100% + env(safe-area-inset-top))); }
+}
+
+/* Fundo e #app fixos na tela inteira; a cor do html é a do fim do degradê. */
 html { background-color: #0c0726; }
 
 body {
