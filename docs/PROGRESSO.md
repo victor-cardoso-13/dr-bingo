@@ -169,3 +169,25 @@ e `node --test` (26 testes).
   `.github/workflows/publicar.yml` roda `npm test` e publica só `index.html`, `manifest`,
   `sw.js`, `css/`, `src/` e `icons/`. Site: https://victor-cardoso-13.github.io/dr-bingo/
 - Testes 31/31; t02–t07 sem FAIL; `CACHE` → v7.
+
+## 2026-11-01 — Sessão 14: login e progresso na nuvem
+
+- **Conta (e-mail e senha)** no mesmo Firebase de todos os jogos (`jogos-sem-anuncio`); o progresso
+  fica em `jogadores/{uid}/jogos/dr-bingo`. Sem mexer nas regras do Firestore.
+- **Onde fica:** primeiro botão dos Ajustes ("Entrar ou criar conta" / e-mail da conta). Janelas:
+  entrar/criar/esqueci a senha, "Sua conta" (situação da nuvem e Sair) e "Qual progresso manter?"
+  (só quando o aparelho e a conta já têm progresso).
+- **Compartilha:** saldo, aposta, nº de cartelas e estatísticas. Fica em cada aparelho: ajustes
+  (som, texto grande, velocidade), cartelas e rodada em andamento.
+- **Decisões:** sem build, então o SDK vem do gstatic (versão fixa 13.1.0, Firestore "lite"), carregado
+  só se há conta ou ao tocar em "Entrar"; quem joga sem conta não faz chamada de rede. Documento
+  inteiro, quem mudou por último vale (`sharedAt`); envio 2 s depois da última mudança, e ao esconder
+  a tela/voltar a internet. Uma gaveta no aparelho por conta (`bingo-vovo:v1:<uid>`), outra sem conta;
+  `bingo-vovo:conta` lembra quem está dentro (abre com o saldo certo até sem internet). Nada é trocado
+  no meio de uma rodada; entrar/sair recarrega a página.
+- **Conferido com a internet de verdade** (conta de teste criada e apagada no fim, junto com o documento):
+  senha errada → "E-mail ou senha incorretos."; criar conta levando o saldo do aparelho; mudança enviada
+  sozinha; aparelho novo puxa da nuvem; sair → sem conta vazio; entrar de novo; janela de escolha.
+- Ajustes com texto grande em iPhone baixo (390×664, 393×659) ainda rolam ≈ 50 px (já rolavam antes;
+  agora menos); celular deitado rola (o jogo é só em pé).
+- Testes 39/39 (novos: `mesclar.test.js` e gavetas em `state.test.js`); t02–t07 sem FAIL; `CACHE` → v8.
