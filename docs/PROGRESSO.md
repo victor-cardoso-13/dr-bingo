@@ -355,3 +355,10 @@ e `node --test` (26 testes).
   `ui/lotto.js`: mostra `size` colunas (o dígito acertado fica amarelo na casa da janela). `openLottoPrizeTable` ganhou a lista de preços.
 - **Logo (pedido do Victor, opção A):** bola de bingo vermelha com aro dourado, "B" e raios azuis. Ícones 192, 512, maskable 512 e apple-touch 180 gerados por `scripts/make_icons.mjs` (SVG → Chrome sem janela; substitui o `make_icons.py`).
 - **Testes:** 64/64; e2e t02–t11 sem FAIL (t11 agora cobre as dezenas); sem rolagem em 360×740 … 1366×1024 com 9 dezenas (dígito de 22 px de largura em 360×740, o menor caso). `CACHE` → v32. **Não publicado.**
+
+## Segurança (OWASP Top 10) — 2026-11-02
+- **Política do navegador (CSP)** na `index.html`: só roda código do próprio jogo e do Firebase (`www.gstatic.com`, de onde o `conta.js` baixa o Firebase); só conversa com o Firebase; sem `unsafe-eval`, sem script/evento dentro da página. Conferido no navegador: jogo abre, login chega ao Firebase ("E-mail ou senha incorretos.") e um `onerror` injetado é **bloqueado**.
+- **Tela:** o jogo monta tudo com `textContent`/`createElement` (o e-mail da conta já é seguro). `tests/seguranca.test.js` falha se a CSP sumir/afrouxar ou se algum `innerHTML` receber `${...}`.
+- **Publicação:** ações do GitHub travadas por código (checkout 7, setup-node 7, upload-pages-artifact 5, deploy-pages 5) e `.github/dependabot.yml` (só ações, mensal). `CACHE` do `sw.js` v32 → v33.
+- Pendente (decisão futura): empacotar o Firebase junto do jogo em vez de baixar do Google, para tirar `www.gstatic.com` do `script-src`.
+- Testes: 67/67.
